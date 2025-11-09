@@ -11,12 +11,20 @@ st.title("ログイン画面")
 try:
     creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
     gc = gspread.service_account_from_dict(creds_dict)
-    sheet = gc.open(st.secrets["USER_SHEET_NAME"]).sheet1
+    st.write("認証成功")
+
+    sheet_name = st.secrets["USER_SHEET_NAME"]
+    st.write(f"指定されたシート名: {sheet_name}")
+
+    sheet = gc.open(sheet_name).sheet1
+    st.write("シート取得成功")
+
     records = sheet.get_all_records()
     df = pd.DataFrame(records, dtype=str)
 except Exception as e:
     st.error(f"Google Sheetsからユーザー情報の取得に失敗しました: {e}")
     st.stop()
+
 
 # IDをキーにした辞書を作成
 user_dict = {
