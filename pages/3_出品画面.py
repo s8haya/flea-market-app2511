@@ -9,12 +9,19 @@ from googleapiclient.http import MediaIoBaseUpload
 from google.oauth2.credentials import Credentials
 import io
 
-# ログインチェック
-if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
+# 共通ヘッダー（ログイン状態とログアウト）
+if "logged_in" in st.session_state and st.session_state["logged_in"]:
+    st.sidebar.markdown(f"👤 ログイン中：{st.session_state['username']} さん")
+    if st.sidebar.button("ログアウト"):
+        st.session_state["logged_in"] = False
+        st.session_state.pop("id", None)
+        st.session_state.pop("username", None)
+        st.rerun()
+else:
     st.warning("ログインしてください")
     st.stop()
 
-# OAuth認証（Secretsから読み込み）
+# OAuth認証
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
@@ -26,7 +33,7 @@ except Exception as e:
     st.error(f"Google SheetsまたはDriveの認証に失敗しました: {e}")
     st.stop()
 
-# ユーザー情報の取得（セッションから）
+# ユーザー情報
 user_id = st.session_state.get("id", "")
 username = st.session_state.get("username", "不明")
 
