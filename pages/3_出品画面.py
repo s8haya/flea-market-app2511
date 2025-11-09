@@ -66,4 +66,49 @@ if submit:
             st.error("画像の読み込みに失敗しました。jpg/png形式で再アップロードしてください。")
             st.stop()
 
-        max_width =
+        max_width = 512
+        if img.width > max_width:
+            ratio = max_width / img.width
+            new_size = (max_width, int(img.height * ratio))
+            img = img.resize(new_size)
+
+        img_buffer = io.BytesIO()
+        img.save(img_buffer, format="PNG")
+        img_buffer.seek(0)
+
+        try:
+            file_metadata = {
+                "name": image_file.name,
+                "parents": [folder_id]
+            }
+            media = MediaIoBaseUpload(img_buffer, mimetype="image/png")
+            uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+
+            drive_service.permissions().create(
+                fileId=uploaded["id"],
+                body={"role": "reader", "type": "anyone"},
+            ).execute()
+
+            image_url = f"https://drive.google.com/uc?export=view&id={uploaded['id']}"
+        except Exception as e:
+            st.error(f"画像のアップロードに失敗しました: {e}")
+            st.stop()
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    new_row = [None, name, price, desc, image_url, user_id, username, now, category]
+    try:
+        sheet.append_row(new_row)
+        st.success("商品を投稿しました！")
+    except Exception as e:
+        st.error(f"商品情報の登録に失敗しました: {e}")
+
+# フッターメニュー
+st.markdown("---")
+st.markdown("### 📌 メニュー")
+menu_cols = st.columns(3)
+with menu_cols[0]:
+    st.page_link("app.py", label="ログイン画面")
+with menu_cols[1]:
+    st.page_link("pages/2_商品検索.py", label="商品検索")
+with menu_cols[2]:
+    st.page_link("pages/3_出品画面.py", label="出品画面")

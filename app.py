@@ -41,7 +41,7 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
                 st.session_state.pop("username", None)
                 st.rerun()
     st.markdown("---")
-    st.subheader("左下のメニューから画面を選択してください。")
+    st.subheader("下のメニューから画面を選択してください。")
 
 # ログインフォーム
 input_id = st.text_input("ユーザーID").strip()
@@ -69,6 +69,6 @@ menu_cols = st.columns(3)
 with menu_cols[0]:
     st.page_link("app.py", label="ログイン画面")
 with menu_cols[1]:
-    st.page_link("pages/商品検索.py", label="商品検索")
+    st.page_link("pages/2_商品検索.py", label="商品検索")
 with menu_cols[2]:
-    st.page_link("pages/出品画面.py", label="出品画面")
+    st.page_link("pages/3_出品画面.py", label="出品画面")
