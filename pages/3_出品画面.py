@@ -9,18 +9,17 @@ from googleapiclient.http import MediaIoBaseUpload
 from google.oauth2.credentials import Credentials
 import io
 
-# ログインチェック＋ヘッダー
+st.set_page_config(page_title="出品画面", layout="centered")
+
+# ログインチェック＋ヘッダー（Flexbox風）
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
-    with st.container():
-        cols = st.columns([3, 1])
-        with cols[0]:
-            st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
-        with cols[1]:
-            if st.button("ログアウト"):
-                st.session_state["logged_in"] = False
-                st.session_state.pop("id", None)
-                st.session_state.pop("username", None)
-                st.rerun()
+    with st.container(horizontal=True):
+        st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
+        if st.button("ログアウト"):
+            st.session_state["logged_in"] = False
+            st.session_state.pop("id", None)
+            st.session_state.pop("username", None)
+            st.rerun()
 else:
     st.warning("ログインしてください")
     st.stop()
@@ -43,13 +42,14 @@ except Exception as e:
 user_id = st.session_state.get("id", "")
 username = st.session_state.get("username", "不明")
 
-# 入力欄
-name = st.text_input("商品名")
-price = st.number_input("価格", min_value=0)
-desc = st.text_area("説明")
-category = st.selectbox("カテゴリ", ["衣類", "雑貨", "本", "その他"])
-image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png", "heic"])
-submit = st.button("投稿する")
+# 入力フォーム（Flexbox風）
+with st.container(border=True, padding=10):
+    name = st.text_input("商品名")
+    price = st.number_input("価格", min_value=0)
+    desc = st.text_area("説明")
+    category = st.selectbox("カテゴリ", ["衣類", "雑貨", "本", "その他"])
+    image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png", "heic"])
+    submit = st.button("投稿する")
 
 # 投稿処理
 if submit:
@@ -102,13 +102,10 @@ if submit:
     except Exception as e:
         st.error(f"商品情報の登録に失敗しました: {e}")
 
-# フッターメニュー
-st.markdown("---")
+# フッターメニュー（Flexbox風）
+st.divider()
 st.markdown("### 📌 メニュー")
-menu_cols = st.columns(3)
-with menu_cols[0]:
+with st.container(horizontal=True):
     st.page_link("app.py", label="ログイン画面")
-with menu_cols[1]:
     st.page_link("pages/2_商品検索.py", label="商品検索")
-with menu_cols[2]:
     st.page_link("pages/3_出品画面.py", label="出品画面")

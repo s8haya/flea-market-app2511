@@ -6,18 +6,17 @@ from PIL import Image, UnidentifiedImageError
 import io
 from google.oauth2.credentials import Credentials
 
-# ログインチェック＋ヘッダー
+st.set_page_config(page_title="商品検索", layout="centered")
+
+# ログインチェック＋ヘッダー（Flexbox風）
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
-    with st.container():
-        cols = st.columns([3, 1])
-        with cols[0]:
-            st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
-        with cols[1]:
-            if st.button("ログアウト"):
-                st.session_state["logged_in"] = False
-                st.session_state.pop("id", None)
-                st.session_state.pop("username", None)
-                st.rerun()
+    with st.container(horizontal=True):
+        st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
+        if st.button("ログアウト"):
+            st.session_state["logged_in"] = False
+            st.session_state.pop("id", None)
+            st.session_state.pop("username", None)
+            st.rerun()
 else:
     st.warning("ログインしてください")
     st.stop()
@@ -45,39 +44,36 @@ except Exception as e:
 search = st.text_input("商品名で検索")
 filtered = [item for item in data if search.lower() in item.get("商品名", "").lower()] if search else data
 
-# 表示
+# 商品表示（Flexbox風）
 if filtered:
     for item in filtered:
-        with st.container():
-            cols = st.columns([1, 2])
-            with cols[0]:
+        with st.container(border=True, padding=10):
+            with st.container(horizontal=True):
                 image_url = item.get("画像URL", "")
                 if image_url:
                     try:
                         response = requests.get(image_url)
                         img = Image.open(io.BytesIO(response.content))
-                        st.image(img, width=150)
+                        st.image(img, use_column_width=True)
                     except Exception:
                         st.warning("画像の読み込みに失敗しました。")
                         st.caption(f"画像URL: {image_url}")
                 else:
                     st.write("画像なし")
-            with cols[1]:
-                st.subheader(item.get("商品名", "不明"))
-                st.write(f"価格: {item.get('価格', '不明')}円")
-                st.write(f"カテゴリ: {item.get('カテゴリ', '不明')}")
-                st.write(item.get("説明", ""))
-                st.caption(f"出品者: {item.get('出品者名', '不明')} / 投稿日: {item.get('投稿日時', '不明')}")
+
+                with st.container():
+                    st.subheader(item.get("商品名", "不明"))
+                    st.write(f"価格: {item.get('価格', '不明')}円")
+                    st.write(f"カテゴリ: {item.get('カテゴリ', '不明')}")
+                    st.write(item.get("説明", ""))
+                    st.caption(f"出品者: {item.get('出品者名', '不明')} / 投稿日: {item.get('投稿日時', '不明')}")
 else:
     st.warning("該当する商品が見つかりませんでした。")
 
-# フッターメニュー
-st.markdown("---")
+# フッターメニュー（Flexbox風）
+st.divider()
 st.markdown("### 📌 メニュー")
-menu_cols = st.columns(3)
-with menu_cols[0]:
+with st.container(horizontal=True):
     st.page_link("app.py", label="ログイン画面")
-with menu_cols[1]:
     st.page_link("pages/2_商品検索.py", label="商品検索")
-with menu_cols[2]:
     st.page_link("pages/3_出品画面.py", label="出品画面")
