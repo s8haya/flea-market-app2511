@@ -47,6 +47,15 @@ search = st.text_input("商品名で検索")
 filtered = [item for item in data if search.lower() in item.get("商品名", "").lower()] if search else data
 
 # 商品表示（カード風グリッド）
+def crop_center_square(img):
+    width, height = img.size
+    min_dim = min(width, height)
+    left = (width - min_dim) // 2
+    top = (height - min_dim) // 2
+    right = left + min_dim
+    bottom = top + min_dim
+    return img.crop((left, top, right, bottom))
+
 if filtered:
     num_cols = 3  # 1行に3商品
     for i in range(0, len(filtered), num_cols):
@@ -60,7 +69,9 @@ if filtered:
                         try:
                             response = requests.get(image_url)
                             img = Image.open(io.BytesIO(response.content))
-                            st.image(img, width=160)  # ✅ 統一サイズ
+                            img = crop_center_square(img)         # ✅ 中央トリミング
+                            img = img.resize((160, 160))          # ✅ サイズ統一
+                            st.image(img)
                         except Exception:
                             st.warning("画像の読み込みに失敗しました。")
                             st.caption(f"画像URL: {image_url}")
