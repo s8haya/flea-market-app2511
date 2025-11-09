@@ -46,9 +46,9 @@ except Exception as e:
 search = st.text_input("商品名で検索")
 filtered = [item for item in data if search.lower() in item.get("商品名", "").lower()] if search else data
 
-# 商品表示（カード風グリッド）
+# 商品表示（スマホ2列対応）
 if filtered:
-    num_cols = 3  # 1行に3商品
+    num_cols = 2  # 1行に2商品
     for i in range(0, len(filtered), num_cols):
         row_items = filtered[i:i+num_cols]
         cols = st.columns(len(row_items))
@@ -60,7 +60,8 @@ if filtered:
                         try:
                             response = requests.get(image_url)
                             img = Image.open(io.BytesIO(response.content))
-                            st.image(img, width=160)  # ✅ 統一サイズ
+                            img = img.resize((120, 120))  # ✅ サイズ統一
+                            st.image(img)
                         except Exception:
                             st.warning("画像の読み込みに失敗しました。")
                             st.caption(f"画像URL: {image_url}")
