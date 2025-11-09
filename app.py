@@ -2,15 +2,17 @@ import streamlit as st
 import pandas as pd
 import gspread
 import json
+from google.oauth2.credentials import Credentials
 
 # Streamlit画面設定
-st.set_page_config(page_title="ログイン", layout="centered")
+st.set_page_config(page_title="ログイン画面", layout="centered")
 st.title("ログイン画面")
 
-# Google Sheets認証（Secretsから読み込み）
+# OAuth認証（Secretsから読み込み）
 try:
-    creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
-    gc = gspread.service_account_from_dict(creds_dict)
+    creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
+    creds = Credentials.from_authorized_user_info(creds_dict)
+    gc = gspread.authorize(creds)
     sheet = gc.open(st.secrets["USER_SHEET_NAME"]).sheet1
     records = sheet.get_all_records()
     df = pd.DataFrame(records, dtype=str)
@@ -56,17 +58,8 @@ if login_btn:
     else:
         st.error("ユーザーIDが存在しません")
 
-# ログイン後のユーザー名表示と画像アップロード
+# ログイン後の表示（商品投稿機能は除外）
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
     st.markdown("---")
     st.subheader(f"現在ログイン中：{st.session_state['username']} さん")
-
-    # 画像アップロード（HEIC検出）
-    uploaded_file = st.file_uploader("画像をアップロード", type=["jpg", "jpeg", "png", "heic"])
-
-    if uploaded_file is not None:
-        if uploaded_file.name.lower().endswith(".heic"):
-            st.error("HEIC形式の画像は現在サポートされていません。JPEGまたはPNG形式でアップロードしてください。")
-            st.stop()
-        else:
-            st.success(f"{uploaded_file.name} を受け付けました！")
+    st.info("左のメニューから「商品検索」や「出品画面」に進んでください。")
