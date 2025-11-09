@@ -20,7 +20,7 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
-        st.switch_page("app.py")    
+        st.switch_page("app.py")
     st.stop()
 
 st.title("商品検索")
@@ -46,30 +46,30 @@ except Exception as e:
 search = st.text_input("商品名で検索")
 filtered = [item for item in data if search.lower() in item.get("商品名", "").lower()] if search else data
 
-# 商品表示（Flexbox風）
+# 商品表示（カード風グリッド）
 if filtered:
-    for item in filtered:
-        st.divider()
-        with st.container():
-            with st.container(horizontal=True):
-                image_url = item.get("画像URL", "")
-                if image_url:
-                    try:
-                        response = requests.get(image_url)
-                        img = Image.open(io.BytesIO(response.content))
-                        st.image(img, use_column_width=True)
-                    except Exception:
-                        st.warning("画像の読み込みに失敗しました。")
-                        st.caption(f"画像URL: {image_url}")
-                else:
-                    st.write("画像なし")
-
+    num_cols = 3  # 1行に3商品
+    for i in range(0, len(filtered), num_cols):
+        row_items = filtered[i:i+num_cols]
+        cols = st.columns(len(row_items))
+        for col, item in zip(cols, row_items):
+            with col:
                 with st.container():
-                    st.subheader(item.get("商品名", "不明"))
-                    st.write(f"価格: {item.get('価格', '不明')}円")
-                    st.write(f"カテゴリ: {item.get('カテゴリ', '不明')}")
-                    st.write(item.get("説明", ""))
-                    st.caption(f"出品者: {item.get('出品者名', '不明')} / 投稿日: {item.get('投稿日時', '不明')}")
+                    image_url = item.get("画像URL", "")
+                    if image_url:
+                        try:
+                            response = requests.get(image_url)
+                            img = Image.open(io.BytesIO(response.content))
+                            st.image(img, width=160)  # ✅ 統一サイズ
+                        except Exception:
+                            st.warning("画像の読み込みに失敗しました。")
+                            st.caption(f"画像URL: {image_url}")
+                    else:
+                        st.write("画像なし")
+
+                    st.markdown(f"**{item.get('商品名', '不明')}**")
+                    st.caption(f"{item.get('価格', '不明')}円 / {item.get('カテゴリ', '不明')}")
+                    st.caption(f"{item.get('出品者名', '不明')} / {item.get('投稿日時', '不明')}")
 else:
     st.warning("該当する商品が見つかりませんでした。")
 
