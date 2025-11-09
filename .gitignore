@@ -179,3 +179,10 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+*.xlsx
+token.json
+client_secret.json
+__pycache__/
+*.log
+client_secret_1094071279363-enu9cmtd6ps97hkrskbrtfg607dsl56i.apps.googleusercontent.com.json
