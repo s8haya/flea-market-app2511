@@ -90,9 +90,11 @@ if filtered:
 
                     # ✅ 出品中のみ購入ボタンを表示
                     if item.get("ステータス") == "出品中":
-                        if st.button(f"購入する（商品ID: {item.get('商品ID')}）", key=item.get("商品ID")):
-                            st.session_state["selected_product"] = item
-                            st.switch_page("pages/4_購入画面.py")
+                        product_id = item.get("商品ID")
+                        if product_id:
+                            if st.button("購入する", key=f"buy_{product_id}"):
+                                st.session_state["selected_product"] = item
+                                st.switch_page("pages/4_購入画面.py")
 else:
     st.warning("該当する商品が見つかりませんでした。")
 
