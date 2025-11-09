@@ -9,6 +9,7 @@ from googleapiclient.http import MediaIoBaseUpload
 from google.oauth2.credentials import Credentials
 import io
 import uuid
+import pytz  # ✅ 日本時間対応
 
 st.set_page_config(page_title="出品画面", layout="centered")
 
@@ -55,56 +56,60 @@ submit = st.button("投稿する")
 
 # 投稿処理
 if submit:
+    if not name or not price or not desc or not image_file:
+        st.warning("商品名・価格・説明・画像はすべて必須です。")
+        st.stop()
+
     image_url = ""
 
-    if image_file:
-        if image_file.name.lower().endswith(".heic"):
-            st.error("HEIC形式の画像は現在サポートされていません。JPEGまたはPNG形式でアップロードしてください。")
-            st.stop()
+    if image_file.name.lower().endswith(".heic"):
+        st.error("HEIC形式の画像は現在サポートされていません。JPEGまたはPNG形式でアップロードしてください。")
+        st.stop()
 
-        try:
-            img = Image.open(image_file)
-        except UnidentifiedImageError:
-            st.error("画像の読み込みに失敗しました。jpg/png形式で再アップロードしてください。")
-            st.stop()
+    try:
+        img = Image.open(image_file)
+    except UnidentifiedImageError:
+        st.error("画像の読み込みに失敗しました。jpg/png形式で再アップロードしてください。")
+        st.stop()
 
-        max_width = 512
-        if img.width > max_width:
-            ratio = max_width / img.width
-            new_size = (max_width, int(img.height * ratio))
-            img = img.resize(new_size)
+    max_width = 512
+    if img.width > max_width:
+        ratio = max_width / img.width
+        new_size = (max_width, int(img.height * ratio))
+        img = img.resize(new_size)
 
-        img_buffer = io.BytesIO()
-        img.save(img_buffer, format="PNG")
-        img_buffer.seek(0)
+    img_buffer = io.BytesIO()
+    img.save(img_buffer, format="PNG")
+    img_buffer.seek(0)
 
-        try:
-            file_metadata = {
-                "name": image_file.name,
-                "parents": [folder_id]
-            }
-            media = MediaIoBaseUpload(img_buffer, mimetype="image/png")
-            uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+    try:
+        file_metadata = {
+            "name": image_file.name,
+            "parents": [folder_id]
+        }
+        media = MediaIoBaseUpload(img_buffer, mimetype="image/png")
+        uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
 
-            drive_service.permissions().create(
-                fileId=uploaded["id"],
-                body={"role": "reader", "type": "anyone"},
-            ).execute()
+        drive_service.permissions().create(
+            fileId=uploaded["id"],
+            body={"role": "reader", "type": "anyone"},
+        ).execute()
 
-            image_url = f"https://drive.google.com/uc?export=view&id={uploaded['id']}"
-        except Exception as e:
-            st.error(f"画像のアップロードに失敗しました: {e}")
-            st.stop()
+        image_url = f"https://drive.google.com/uc?export=view&id={uploaded['id']}"
+    except Exception as e:
+        st.error(f"画像のアップロードに失敗しました: {e}")
+        st.stop()
 
-    # 商品IDとステータスを追加
+    # 商品IDと日本時間の投稿日時
     product_id = str(uuid.uuid4())
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    jst = pytz.timezone("Asia/Tokyo")
+    now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
     status = "出品中"
 
     new_row = [
         product_id, name, price, desc, image_url,
         user_id, username, now, category,
-        "", "", "", status  # 購入者情報は空欄
+        "", "", "", status
     ]
 
     try:
