@@ -1,33 +1,33 @@
 import streamlit as st
 import gspread
-from google.oauth2.credentials import Credentials
-import toml
+import json
 import requests
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import io
 import pandas as pd
+from google.oauth2.service_account import Credentials
 
 # ログインチェック
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     st.warning("ログインしてください")
     st.stop()
 
-# 設定読み込み
-config = toml.load("/content/drive/MyDrive/Colab Notebooks/flea_market_app/config.toml")
-token_path = config["google_sheets"]["credentials_path"]
-sheet_name = config["google_sheets"]["spreadsheet_name"]
-
-# OAuth認証（Driveスコープも追加）
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
-]
-creds = Credentials.from_authorized_user_file(token_path, SCOPES)
-gc = gspread.authorize(creds)
-sheet = gc.open(sheet_name).sheet1
+# Secretsから認証情報と設定を取得
+try:
+    creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+    creds = Credentials.from_service_account_info(creds_dict)
+    gc = gspread.service_account_from_dict(creds_dict)
+    sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
+except Exception as e:
+    st.error(f"Google Sheetsの認証に失敗しました: {e}")
+    st.stop()
 
 # データ取得
-data = sheet.get_all_records()
+try:
+    data = sheet.get_all_records()
+except Exception as e:
+    st.error(f"商品データの取得に失敗しました: {e}")
+    st.stop()
 
 # UI
 st.title("商品検索")
@@ -48,8 +48,11 @@ if filtered:
                         response = requests.get(image_url)
                         img = Image.open(io.BytesIO(response.content))
                         st.image(img, width=150)
-                    except Exception:
+                    except UnidentifiedImageError:
                         st.warning("画像の読み込みに失敗しました。")
+                        st.caption(f"画像URL: {image_url}")
+                    except Exception:
+                        st.warning("画像の取得に失敗しました。")
                         st.caption(f"画像URL: {image_url}")
                 else:
                     st.write("画像なし")
