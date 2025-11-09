@@ -6,17 +6,23 @@ from PIL import Image, UnidentifiedImageError
 import io
 from google.oauth2.credentials import Credentials
 
-# 共通ヘッダー（ログイン状態とログアウト）
+# ログインチェック＋ヘッダー
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
-    st.sidebar.markdown(f"👤 ログイン中：{st.session_state['username']} さん")
-    if st.sidebar.button("ログアウト"):
-        st.session_state["logged_in"] = False
-        st.session_state.pop("id", None)
-        st.session_state.pop("username", None)
-        st.rerun()
+    with st.container():
+        cols = st.columns([3, 1])
+        with cols[0]:
+            st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
+        with cols[1]:
+            if st.button("ログアウト"):
+                st.session_state["logged_in"] = False
+                st.session_state.pop("id", None)
+                st.session_state.pop("username", None)
+                st.rerun()
 else:
     st.warning("ログインしてください")
     st.stop()
+
+st.title("商品検索")
 
 # OAuth認証
 try:
@@ -35,14 +41,11 @@ except Exception as e:
     st.error(f"商品データの取得に失敗しました: {e}")
     st.stop()
 
-# UI
-st.title("商品検索")
+# 検索UI
 search = st.text_input("商品名で検索")
-
-# 検索フィルタ
 filtered = [item for item in data if search.lower() in item.get("商品名", "").lower()] if search else data
 
-# 一覧表示
+# 表示
 if filtered:
     for item in filtered:
         with st.container():
@@ -54,11 +57,8 @@ if filtered:
                         response = requests.get(image_url)
                         img = Image.open(io.BytesIO(response.content))
                         st.image(img, width=150)
-                    except UnidentifiedImageError:
-                        st.warning("画像の読み込みに失敗しました。")
-                        st.caption(f"画像URL: {image_url}")
                     except Exception:
-                        st.warning("画像の取得に失敗しました。")
+                        st.warning("画像の読み込みに失敗しました。")
                         st.caption(f"画像URL: {image_url}")
                 else:
                     st.write("画像なし")
@@ -70,3 +70,14 @@ if filtered:
                 st.caption(f"出品者: {item.get('出品者名', '不明')} / 投稿日: {item.get('投稿日時', '不明')}")
 else:
     st.warning("該当する商品が見つかりませんでした。")
+
+# フッターメニュー
+st.markdown("---")
+st.markdown("### 📌 メニュー")
+menu_cols = st.columns(3)
+with menu_cols[0]:
+    st.page_link("app.py", label="ログイン画面")
+with menu_cols[1]:
+    st.page_link("pages/商品検索.py", label="商品検索")
+with menu_cols[2]:
+    st.page_link("pages/出品画面.py", label="出品画面")
