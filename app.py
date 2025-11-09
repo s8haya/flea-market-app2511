@@ -28,25 +28,23 @@ user_dict = {
     for _, row in df.iterrows()
 }
 
-# ログイン済みならヘッダー表示
+# ヘッダー：Flexbox風レイアウト
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
-    with st.container():
-        cols = st.columns([3, 1])
-        with cols[0]:
-            st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
-        with cols[1]:
-            if st.button("ログアウト"):
-                st.session_state["logged_in"] = False
-                st.session_state.pop("id", None)
-                st.session_state.pop("username", None)
-                st.rerun()
-    st.markdown("---")
+    with st.container(horizontal=True):
+        st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
+        if st.button("ログアウト"):
+            st.session_state["logged_in"] = False
+            st.session_state.pop("id", None)
+            st.session_state.pop("username", None)
+            st.rerun()
+    st.divider()
     st.subheader("下のメニューから画面を選択してください。")
 
 # ログインフォーム
-input_id = st.text_input("ユーザーID").strip()
-input_pass = st.text_input("パスワード", type="password").strip()
-login_btn = st.button("ログイン")
+with st.container():
+    input_id = st.text_input("ユーザーID").strip()
+    input_pass = st.text_input("パスワード", type="password").strip()
+    login_btn = st.button("ログイン")
 
 if login_btn:
     if input_id in user_dict:
@@ -62,13 +60,10 @@ if login_btn:
     else:
         st.error("ユーザーIDが存在しません")
 
-# フッターメニュー
-st.markdown("---")
+# フッターメニュー：Flexbox風レイアウト
+st.divider()
 st.markdown("### 📌 メニュー")
-menu_cols = st.columns(3)
-with menu_cols[0]:
+with st.container(horizontal=True):
     st.page_link("app.py", label="ログイン画面")
-with menu_cols[1]:
     st.page_link("pages/2_商品検索.py", label="商品検索")
-with menu_cols[2]:
     st.page_link("pages/3_出品画面.py", label="出品画面")
