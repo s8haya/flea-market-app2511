@@ -16,6 +16,7 @@ authtoken = "34ibGjyecTmQ3drlf5zoWb9y4HN_7JSkhdGwLEYsgzupdaogK"
 [google_sheets]
 credentials_path = "token.json"
 spreadsheet_name = "フリマ商品一覧"
+user_sheet_name = "ユーザー管理"  # ← 追加：ユーザー情報用の別スプレッドシート名
 
 [google_drive]
 folder_id = "1YBamyvLwadFmrpj2p8LUyvxc1r5fGURp"

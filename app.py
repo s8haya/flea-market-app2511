@@ -1,14 +1,21 @@
 import streamlit as st
 import pandas as pd
+import gspread
+import toml
 
-# CSVファイルの絶対パス（Google Drive上）
-csv_path = "/content/drive/MyDrive/Colab Notebooks/flea_market_app/users.csv"
+# 設定ファイル読み込み
+config = toml.load("config.toml")
+credentials_path = config["google_sheets"]["credentials_path"]
+user_sheet_name = config["google_sheets"]["user_sheet_name"]
 
-# CSVを文字コードと型指定で読み込む
+# Google Sheets認証
 try:
-    df = pd.read_csv(csv_path, encoding="cp932", dtype=str)
+    gc = gspread.service_account(filename=credentials_path)
+    sheet = gc.open(user_sheet_name).sheet1
+    records = sheet.get_all_records()
+    df = pd.DataFrame(records, dtype=str)
 except Exception as e:
-    st.error(f"CSV読み込みエラー: {e}")
+    st.error(f"Google Sheetsからユーザー情報の取得に失敗しました: {e}")
     st.stop()
 
 # IDをキーにした辞書を作成
@@ -31,7 +38,7 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
         st.session_state["logged_in"] = False
         st.session_state.pop("id", None)
         st.session_state.pop("username", None)
-        st.rerun()  # ページを再読み込みしてログイン画面に戻す
+        st.rerun()
 
 # 入力欄（空白除去）
 input_id = st.text_input("ユーザーID").strip()
@@ -47,7 +54,7 @@ if login_btn:
             st.session_state["id"] = input_id
             st.session_state["username"] = user_dict[input_id]["username"]
             st.success(f"{user_dict[input_id]['username']}さん、ようこそ！")
-            st.rerun()  # ログイン後にページを再読み込み
+            st.rerun()
         else:
             st.error("パスワードが間違っています")
     else:
