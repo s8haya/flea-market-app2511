@@ -8,7 +8,7 @@ from google.oauth2.credentials import Credentials
 
 st.set_page_config(page_title="商品検索", layout="centered")
 
-# ログインチェック＋ヘッダー（Flexbox風）
+# ログインチェック＋ヘッダー
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
@@ -35,9 +35,13 @@ except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
 
-# データ取得
+# データ取得＋ステータスフィルタ（取下げ除外）
 try:
-    data = sheet.get_all_records()
+    raw_data = sheet.get_all_records()
+    data = [
+        row for row in raw_data
+        if row.get("商品名") and row.get("価格") and row.get("画像URL") and row.get("ステータス") != "取下げ"
+    ]
 except Exception as e:
     st.error(f"商品データの取得に失敗しました: {e}")
     st.stop()
@@ -46,7 +50,7 @@ except Exception as e:
 search = st.text_input("商品名で検索")
 filtered = [item for item in data if search.lower() in item.get("商品名", "").lower()] if search else data
 
-# 商品表示（カード風グリッド）
+# 画像トリミング関数（中央正方形）
 def crop_center_square(img):
     width, height = img.size
     min_dim = min(width, height)
@@ -56,8 +60,9 @@ def crop_center_square(img):
     bottom = top + min_dim
     return img.crop((left, top, right, bottom))
 
+# 商品表示（カード風グリッド）
 if filtered:
-    num_cols = 3  # 1行に3商品
+    num_cols = 2  # スマホでも2列対応
     for i in range(0, len(filtered), num_cols):
         row_items = filtered[i:i+num_cols]
         cols = st.columns(len(row_items))
@@ -69,8 +74,8 @@ if filtered:
                         try:
                             response = requests.get(image_url)
                             img = Image.open(io.BytesIO(response.content))
-                            img = crop_center_square(img)         # ✅ 中央トリミング
-                            img = img.resize((160, 160))          # ✅ サイズ統一
+                            img = crop_center_square(img)
+                            img = img.resize((160, 160))
                             st.image(img)
                         except Exception:
                             st.warning("画像の読み込みに失敗しました。")
@@ -81,10 +86,17 @@ if filtered:
                     st.markdown(f"**{item.get('商品名', '不明')}**")
                     st.caption(f"{item.get('価格', '不明')}円 / {item.get('カテゴリ', '不明')}")
                     st.caption(f"{item.get('出品者名', '不明')} / {item.get('投稿日時', '不明')}")
+                    st.caption(f"ステータス: {item.get('ステータス', '不明')}")
+
+                    # ✅ 出品中のみ購入ボタンを表示
+                    if item.get("ステータス") == "出品中":
+                        if st.button(f"購入する（商品ID: {item.get('商品ID')}）", key=item.get("商品ID")):
+                            st.session_state["selected_product"] = item
+                            st.switch_page("pages/4_購入画面.py")
 else:
     st.warning("該当する商品が見つかりませんでした。")
 
-# フッターメニュー（Flexbox風）
+# フッターメニュー
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
