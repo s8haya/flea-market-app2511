@@ -6,6 +6,7 @@ from PIL import Image, UnidentifiedImageError
 from datetime import datetime
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
+from google.oauth2.service_account import Credentials
 import io
 
 # ログインチェック
@@ -16,11 +17,11 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
 # Secretsから認証情報と設定を取得
 try:
     creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+    creds = Credentials.from_service_account_info(creds_dict)
     gc = gspread.service_account_from_dict(creds_dict)
     sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
     folder_id = st.secrets["DRIVE_FOLDER_ID"]
-
-    drive_service = build("drive", "v3", credentials=gspread.auth.service_account.Credentials.from_service_account_info(creds_dict))
+    drive_service = build("drive", "v3", credentials=creds)
 except Exception as e:
     st.error(f"Google SheetsまたはDriveの認証に失敗しました: {e}")
     st.stop()
