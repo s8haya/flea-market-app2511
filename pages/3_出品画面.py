@@ -8,10 +8,11 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 from google.oauth2.credentials import Credentials
 import io
+import uuid
 
 st.set_page_config(page_title="出品画面", layout="centered")
 
-# ログインチェック＋ヘッダー（Flexbox風）
+# ログインチェック＋ヘッダー
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
@@ -44,14 +45,13 @@ except Exception as e:
 user_id = st.session_state.get("id", "")
 username = st.session_state.get("username", "不明")
 
-# 入力フォーム（安定版）
-with st.container():
-    name = st.text_input("商品名")
-    price = st.number_input("価格", min_value=0)
-    desc = st.text_area("説明")
-    category = st.selectbox("カテゴリ", ["衣類", "雑貨", "本", "その他"])
-    image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png", "heic"])
-    submit = st.button("投稿する")
+# 入力フォーム
+name = st.text_input("商品名")
+price = st.number_input("価格", min_value=0)
+desc = st.text_area("説明")
+category = st.selectbox("カテゴリ", ["衣類", "雑貨", "本", "その他"])
+image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png", "heic"])
+submit = st.button("投稿する")
 
 # 投稿処理
 if submit:
@@ -96,15 +96,24 @@ if submit:
             st.error(f"画像のアップロードに失敗しました: {e}")
             st.stop()
 
+    # 商品IDとステータスを追加
+    product_id = str(uuid.uuid4())
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    new_row = [None, name, price, desc, image_url, user_id, username, now, category]
+    status = "出品中"
+
+    new_row = [
+        product_id, name, price, desc, image_url,
+        user_id, username, now, category,
+        "", "", "", status  # 購入者情報は空欄
+    ]
+
     try:
         sheet.append_row(new_row)
         st.success("商品を投稿しました！")
     except Exception as e:
         st.error(f"商品情報の登録に失敗しました: {e}")
 
-# フッターメニュー（Flexbox風）
+# フッターメニュー
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
