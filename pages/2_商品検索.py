@@ -4,19 +4,18 @@ import json
 import requests
 from PIL import Image, UnidentifiedImageError
 import io
-import pandas as pd
-from google.oauth2.service_account import Credentials
+from google.oauth2.credentials import Credentials
 
 # ログインチェック
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     st.warning("ログインしてください")
     st.stop()
 
-# Secretsから認証情報と設定を取得
+# OAuth認証（Secretsから読み込み）
 try:
-    creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
-    creds = Credentials.from_service_account_info(creds_dict)
-    gc = gspread.service_account_from_dict(creds_dict)
+    creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
+    creds = Credentials.from_authorized_user_info(creds_dict)
+    gc = gspread.authorize(creds)
     sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
 except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")

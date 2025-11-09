@@ -6,7 +6,7 @@ from PIL import Image, UnidentifiedImageError
 from datetime import datetime
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
-from google.oauth2.service_account import Credentials
+from google.oauth2.credentials import Credentials
 import io
 
 # ログインチェック
@@ -14,11 +14,11 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     st.warning("ログインしてください")
     st.stop()
 
-# Secretsから認証情報と設定を取得
+# OAuth認証（Secretsから読み込み）
 try:
-    creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
-    creds = Credentials.from_service_account_info(creds_dict)
-    gc = gspread.service_account_from_dict(creds_dict)
+    creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
+    creds = Credentials.from_authorized_user_info(creds_dict)
+    gc = gspread.authorize(creds)
     sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
     folder_id = st.secrets["DRIVE_FOLDER_ID"]
     drive_service = build("drive", "v3", credentials=creds)
@@ -44,7 +44,6 @@ if submit:
     image_url = ""
 
     if image_file:
-        # HEIC形式は拒否（pyheif未使用）
         if image_file.name.lower().endswith(".heic"):
             st.error("HEIC形式の画像は現在サポートされていません。JPEGまたはPNG形式でアップロードしてください。")
             st.stop()
@@ -55,19 +54,16 @@ if submit:
             st.error("画像の読み込みに失敗しました。jpg/png形式で再アップロードしてください。")
             st.stop()
 
-        # サイズ調整（最大幅512px）
         max_width = 512
         if img.width > max_width:
             ratio = max_width / img.width
             new_size = (max_width, int(img.height * ratio))
             img = img.resize(new_size)
 
-        # バッファに保存
         img_buffer = io.BytesIO()
         img.save(img_buffer, format="PNG")
         img_buffer.seek(0)
 
-        # Driveにアップロード
         try:
             file_metadata = {
                 "name": image_file.name,
@@ -86,7 +82,6 @@ if submit:
             st.error(f"画像のアップロードに失敗しました: {e}")
             st.stop()
 
-    # 商品情報をシートに追加
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     new_row = [None, name, price, desc, image_url, user_id, username, now, category]
     try:
