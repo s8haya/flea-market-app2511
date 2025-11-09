@@ -84,4 +84,21 @@ if st.button("購入する"):
         sheet.update_cell(row_index + 2, 10, st.session_state.get("id", ""))         # J列: 購入者
         sheet.update_cell(row_index + 2, 11, st.session_state.get("username", ""))   # K列: 購入者名
         sheet.update_cell(row_index + 2, 12, now)                                     # L列: 購入日時
-        sheet.update_cell(row_index + 2, 13, "購入手続き中")                         
+        sheet.update_cell(row_index + 2, 13, "購入手続き中")                          # M列: ステータス
+
+        st.success("購入手続きに進みます")
+        st.switch_page("pages/5_支払い画面.py")
+    except Exception as e:
+        st.error(f"購入処理に失敗しました: {e}")
+
+# キャンセル処理
+if st.button("キャンセルする"):
+    st.switch_page("pages/2_商品検索.py")
+
+# フッターメニュー
+st.divider()
+st.markdown("### 📌 メニュー")
+with st.container(horizontal=True):
+    st.page_link("app.py", label="ログイン画面")
+    st.page_link("pages/2_商品検索.py", label="商品検索")
+    st.page_link("pages/3_出品画面.py", label="出品画面")
