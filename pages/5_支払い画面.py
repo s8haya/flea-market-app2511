@@ -56,7 +56,7 @@ st.subheader("以下のQRコードからお支払いください")
 
 # QRコード表示（同階層にQRhaya.pngがある前提）
 try:
-    qr_image = Image.open("QRhaya.png")
+    qr_image = Image.open("QRhaya")
     st.image(qr_image, width=240)
 except Exception:
     st.error("QRコード画像の読み込みに失敗しました。QRhaya.png が正しく配置されているか確認してください。")
