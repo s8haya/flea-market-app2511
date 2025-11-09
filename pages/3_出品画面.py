@@ -22,6 +22,8 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
             st.rerun()
 else:
     st.warning("ログインしてください")
+    if st.button("ログイン画面へ"):
+        st.switch_page("app.py")
     st.stop()
 
 st.title("商品投稿フォーム")
