@@ -6,6 +6,5 @@ google-auth
 google-auth-httplib2
 google-auth-oauthlib
 pyngrok
-pyheif
 Pillow
 toml

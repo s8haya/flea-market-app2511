@@ -60,7 +60,17 @@ if login_btn:
     else:
         st.error("ユーザーIDが存在しません")
 
-# ログイン後のユーザー名表示（本文側にも）
+# ログイン後のユーザー名表示と画像アップロード
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
     st.markdown("---")
     st.subheader(f"現在ログイン中：{st.session_state['username']} さん")
+
+    # 画像アップロード（HEIC検出）
+    uploaded_file = st.file_uploader("画像をアップロード", type=["jpg", "jpeg", "png", "heic"])
+
+    if uploaded_file is not None:
+        if uploaded_file.name.lower().endswith(".heic"):
+            st.error("HEIC形式の画像は現在サポートされていません。JPEGまたはPNG形式でアップロードしてください。")
+            st.stop()
+        else:
+            st.success(f"{uploaded_file.name} を受け付けました！")
