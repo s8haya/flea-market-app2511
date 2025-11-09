@@ -43,13 +43,12 @@ user_id = st.session_state.get("id", "")
 username = st.session_state.get("username", "不明")
 
 # 入力フォーム（Flexbox風）
-with st.container(border=True, padding=10):
-    name = st.text_input("商品名")
-    price = st.number_input("価格", min_value=0)
-    desc = st.text_area("説明")
-    category = st.selectbox("カテゴリ", ["衣類", "雑貨", "本", "その他"])
-    image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png", "heic"])
-    submit = st.button("投稿する")
+name = st.text_input("商品名")
+price = st.number_input("価格", min_value=0)
+desc = st.text_area("説明")
+category = st.selectbox("カテゴリ", ["衣類", "雑貨", "本", "その他"])
+image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png", "heic"])
+submit = st.button("投稿する")
 
 # 投稿処理
 if submit:

@@ -47,7 +47,8 @@ filtered = [item for item in data if search.lower() in item.get("商品名", "")
 # 商品表示（Flexbox風）
 if filtered:
     for item in filtered:
-        with st.container(border=True, padding=10):
+        st.divider()
+        with st.container():
             with st.container(horizontal=True):
                 image_url = item.get("画像URL", "")
                 if image_url:
