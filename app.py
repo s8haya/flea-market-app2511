@@ -1,17 +1,17 @@
 import streamlit as st
 import pandas as pd
 import gspread
-import toml
+import json
 
-# 設定ファイル読み込み
-config = toml.load("config.toml")
-credentials_path = config["google_sheets"]["credentials_path"]
-user_sheet_name = config["google_sheets"]["user_sheet_name"]
+# Streamlit画面設定
+st.set_page_config(page_title="ログイン", layout="centered")
+st.title("ログイン画面")
 
-# Google Sheets認証
+# Google Sheets認証（Secretsから読み込み）
 try:
-    gc = gspread.service_account(filename=credentials_path)
-    sheet = gc.open(user_sheet_name).sheet1
+    creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+    gc = gspread.service_account_from_dict(creds_dict)
+    sheet = gc.open(st.secrets["USER_SHEET_NAME"]).sheet1
     records = sheet.get_all_records()
     df = pd.DataFrame(records, dtype=str)
 except Exception as e:
@@ -26,10 +26,6 @@ user_dict = {
     }
     for _, row in df.iterrows()
 }
-
-# Streamlit画面設定
-st.set_page_config(page_title="ログイン", layout="centered")
-st.title("ログイン画面")
 
 # サイドバーにログイン状態を表示（ログイン済みなら）
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
