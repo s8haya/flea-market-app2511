@@ -8,6 +8,11 @@ import pytz
 
 st.set_page_config(page_title="支払い画面", layout="centered")
 
+# ✅ ページ遷移フラグを確認
+if "current_page" in st.session_state and st.session_state["current_page"] == "支払い画面":
+    # 一度だけ消す
+    st.session_state.pop("current_page")
+
 # ログインチェック＋ヘッダー
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
     with st.container(horizontal=True):
@@ -81,10 +86,16 @@ if st.button("支払い済"):
     except Exception as e:
         st.error(f"ステータス更新に失敗しました: {e}")
 
-# あとで支払う処理
+# あとで支払う処理（switch_pageを直接呼ばず、フラグ＋rerun方式）
 if st.button("あとで支払う"):
     st.info("マイページから後ほどお支払いください。")
-    st.switch_page("pages/6_マイページ（購入）.py")
+    st.session_state["current_page"] = "マイページ（購入）"
+    st.rerun()
+
+# ✅ ページ冒頭で「マイページ（購入）」に飛ばす処理
+if "current_page" in st.session_state and st.session_state["current_page"] == "マイページ（購入）":
+    st.session_state.pop("current_page")
+    st.switch_page("6_マイページ（購入）")
 
 # フッターメニュー
 st.divider()
