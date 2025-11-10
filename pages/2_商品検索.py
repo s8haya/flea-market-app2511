@@ -5,6 +5,7 @@ import requests
 from PIL import Image, UnidentifiedImageError
 import io
 from google.oauth2.credentials import Credentials
+from datetime import datetime
 
 st.set_page_config(page_title="商品検索", layout="centered")
 st.title("商品検索")
@@ -52,9 +53,40 @@ data = load_product_data()
 if not data:
     st.stop()
 
-# ✅ 検索UI
-search = st.text_input("商品名で検索")
-filtered = [item for item in data if search.lower() in item.get("商品名", "").lower()] if search else data
+# ✅ 検索・絞り込みUI
+with st.container():
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        search = st.text_input("🔍 商品名で検索")
+    with col2:
+        category_filter = st.selectbox("📦 カテゴリ絞り込み", ["すべて"] + sorted(set(row.get("カテゴリ", "") for row in data)))
+    with col3:
+        seller_filter = st.selectbox("👤 出品者絞り込み", ["すべて"] + sorted(set(row.get("出品者名", "") for row in data)))
+
+    sort_option = st.radio("並び順", ["新着順", "価格が安い順", "価格が高い順"], horizontal=True)
+
+# ✅ 絞り込み処理
+filtered = data
+if search:
+    filtered = [item for item in filtered if search.lower() in item.get("商品名", "").lower()]
+if category_filter != "すべて":
+    filtered = [item for item in filtered if item.get("カテゴリ") == category_filter]
+if seller_filter != "すべて":
+    filtered = [item for item in filtered if item.get("出品者名") == seller_filter]
+
+# ✅ 並び替え処理
+def parse_datetime(dt_str):
+    try:
+        return datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+    except:
+        return datetime.min
+
+if sort_option == "新着順":
+    filtered.sort(key=lambda x: parse_datetime(x.get("投稿日時", "")), reverse=True)
+elif sort_option == "価格が安い順":
+    filtered.sort(key=lambda x: x.get("価格", 0))
+elif sort_option == "価格が高い順":
+    filtered.sort(key=lambda x: x.get("価格", 0), reverse=True)
 
 # ✅ ページネーション設定
 ITEMS_PER_PAGE = 6
