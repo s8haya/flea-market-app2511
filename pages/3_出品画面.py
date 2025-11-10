@@ -16,7 +16,7 @@ st.set_page_config(page_title="出品画面", layout="centered")
 st.title("商品投稿フォーム")
 
 # ✅ ログインチェック＋ヘッダー
-if "logged_in" in st.session_state and st.session_state["logged_in"]:
+if st.session_state.get("logged_in"):
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
         if st.button("ログアウト"):
@@ -27,7 +27,8 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
-        st.page_link("app.py")
+        st.switch_page("app.py")
+        st.stop()
     st.stop()
 
 # ✅ OAuth認証とサービス初期化
@@ -113,12 +114,12 @@ if submit:
 
     try:
         sheet.append_row(new_row)
-        time.sleep(1)  # ✅ 書き込み直後の連続アクセスを緩和
+        time.sleep(1)
         st.success("商品を投稿しました！")
     except Exception as e:
         st.error(f"商品情報の登録に失敗しました: {e}")
 
-# ✅ フッターメニュー
+# ✅ フッターメニュー（リンク専用）
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
