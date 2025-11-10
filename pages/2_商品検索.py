@@ -25,14 +25,14 @@ else:
         st.stop()
     st.stop()
 
-# ✅ OAuth認証
-try:
+# ✅ OAuth認証（キャッシュ化）
+@st.cache_resource
+def get_gspread_client():
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
-    gc = gspread.authorize(creds)
-except Exception as e:
-    st.error(f"Google Sheetsの認証に失敗しました: {e}")
-    st.stop()
+    return gspread.authorize(creds)
+
+gc = get_gspread_client()
 
 # ✅ 商品データ取得（キャッシュ化）
 @st.cache_data(ttl=60)
@@ -104,7 +104,7 @@ if page_items:
                     image_url = item.get("画像URL", "")
                     if image_url:
                         try:
-                            response = requests.get(image_url, timeout=3)
+                            response = requests.get(image_url, stream=True, timeout=3)
                             img = Image.open(io.BytesIO(response.content))
                             img = crop_center_square(img)
                             img = img.resize((160, 160))
