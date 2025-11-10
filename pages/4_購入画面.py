@@ -108,7 +108,21 @@ if st.button("購入する"):
 
 # キャンセル処理
 if st.button("キャンセルする"):
-    st.switch_page("pages/2_商品検索.py")
+    try:
+        product_id = product.get("商品ID")
+        all_data = sheet.get_all_records()
+        row_index = next((i for i, row in enumerate(all_data) if row.get("商品ID") == product_id), None)
+        if row_index is None:
+            st.error("商品が見つかりませんでした。")
+            st.stop()
+
+        current_status = all_data[row_index].get("ステータス", "")
+        if current_status in ["出品中", "取下げ"]:
+            st.switch_page("pages/2_商品検索.py")
+        else:
+            st.warning("すでに商品を購入済み等でキャンセルできません。詳しくは照会先に連絡ください。")
+    except Exception as e:
+        st.error("キャンセル処理中にエラーが発生しました。")
 
 # フッターメニュー
 st.divider()
