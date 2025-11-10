@@ -9,11 +9,13 @@ from googleapiclient.http import MediaIoBaseUpload
 from google.oauth2.credentials import Credentials
 import io
 import uuid
-import pytz  # ✅ 日本時間対応
+import pytz
+import time
 
 st.set_page_config(page_title="出品画面", layout="centered")
+st.title("商品投稿フォーム")
 
-# ログインチェック＋ヘッダー
+# ✅ ログインチェック＋ヘッダー
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
@@ -25,12 +27,10 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
-        st.switch_page("app.py")
+        st.page_link("app.py")
     st.stop()
 
-st.title("商品投稿フォーム")
-
-# OAuth認証
+# ✅ OAuth認証とサービス初期化
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
@@ -42,11 +42,11 @@ except Exception as e:
     st.error(f"Google SheetsまたはDriveの認証に失敗しました: {e}")
     st.stop()
 
-# ユーザー情報
+# ✅ ユーザー情報
 user_id = st.session_state.get("id", "")
 username = st.session_state.get("username", "不明")
 
-# 入力フォーム
+# ✅ 入力フォーム
 name = st.text_input("商品名")
 price = st.number_input("価格", min_value=0)
 desc = st.text_area("説明")
@@ -54,13 +54,11 @@ category = st.selectbox("カテゴリ", ["衣類", "雑貨", "本", "その他"]
 image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png", "heic"])
 submit = st.button("投稿する")
 
-# 投稿処理
+# ✅ 投稿処理
 if submit:
     if not name or not price or not desc or not image_file:
         st.warning("商品名・価格・説明・画像はすべて必須です。")
         st.stop()
-
-    image_url = ""
 
     if image_file.name.lower().endswith(".heic"):
         st.error("HEIC形式の画像は現在サポートされていません。JPEGまたはPNG形式でアップロードしてください。")
@@ -82,6 +80,7 @@ if submit:
     img.save(img_buffer, format="PNG")
     img_buffer.seek(0)
 
+    # ✅ 画像アップロード
     try:
         file_metadata = {
             "name": image_file.name,
@@ -100,7 +99,7 @@ if submit:
         st.error(f"画像のアップロードに失敗しました: {e}")
         st.stop()
 
-    # 商品IDと日本時間の投稿日時
+    # ✅ 商品情報の登録
     product_id = str(uuid.uuid4())
     jst = pytz.timezone("Asia/Tokyo")
     now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
@@ -114,11 +113,12 @@ if submit:
 
     try:
         sheet.append_row(new_row)
+        time.sleep(1)  # ✅ 書き込み直後の連続アクセスを緩和
         st.success("商品を投稿しました！")
     except Exception as e:
         st.error(f"商品情報の登録に失敗しました: {e}")
 
-# フッターメニュー
+# ✅ フッターメニュー
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
