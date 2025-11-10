@@ -68,7 +68,7 @@ if purchased_items:
             if item.get("ステータス") == "購入手続き中":
                 if st.button("支払い画面へ進む", key=f"pay_{item.get('商品ID')}"):
                     st.session_state["selected_product"] = item
-                    st.switch_page("支払い画面")  # ← page_title に一致していることを確認
+                    st.switch_page("5_支払い画面")  # ← page_title に一致していることを確認
 else:
     st.info("購入履歴がありません。")
 
