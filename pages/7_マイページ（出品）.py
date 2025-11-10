@@ -1,14 +1,15 @@
 import streamlit as st
 import gspread
 import json
+import requests
 from PIL import Image
-from datetime import datetime
+import io
 from google.oauth2.credentials import Credentials
-import pytz
 
-st.set_page_config(page_title="支払い画面", layout="centered")
+st.set_page_config(page_title="マイページ（出品）", layout="centered")
+st.title("マイページ（出品）")
 
-# ログインチェック＋ヘッダー
+# ログインチェック
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
@@ -20,16 +21,7 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
-        st.switch_page("app.py")
-    st.stop()
-
-st.title("支払い画面")
-
-# 商品情報の取得
-product = st.session_state.get("selected_product")
-if not product:
-    st.warning("商品情報が見つかりませんでした。")
-    st.switch_page("pages/2_商品検索.py")
+        st.page_link("app.py")
     st.stop()
 
 # OAuth認証
@@ -42,49 +34,65 @@ except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
 
-# 商品情報表示
-st.subheader("購入商品情報")
-st.markdown(f"**{product.get('商品名', '不明')}**")
-st.write(f"価格: {product.get('価格', '不明')}円")
-st.write(f"カテゴリ: {product.get('カテゴリ', '不明')}")
-st.write(product.get("説明", ""))
-st.caption(f"出品者: {product.get('出品者名', '不明')} / 投稿日: {product.get('投稿日時', '不明')}")
-st.caption(f"ステータス: {product.get('ステータス', '不明')}")
-
-st.divider()
-st.subheader("以下のQRコードからお支払いください")
-
-# QRコード表示（同階層にQRhaya.pngがある前提）
+# 商品データ取得
 try:
-    qr_image = Image.open("QRhaya.png")
-    st.image(qr_image, width=240)
-except Exception:
-    st.error("QRコード画像の読み込みに失敗しました。QRhaya.png が正しく配置されているか確認してください。")
+    raw_data = sheet.get_all_records()
+    user_id = str(st.session_state.get("id", "")).strip()
+    listed_items = [row for row in raw_data if str(row.get("出品者ID", "")).strip() == user_id]
+except Exception as e:
+    st.error(f"出品履歴の取得に失敗しました: {e}")
     st.stop()
 
-st.divider()
-st.subheader("支払い後の操作")
+# 商品表示
+if listed_items:
+    st.subheader("出品した商品一覧")
+    for item in listed_items:
+        with st.container(border=True):
+            image_url = item.get("画像URL", "")
+            if image_url:
+                try:
+                    response = requests.get(image_url)
+                    img = Image.open(io.BytesIO(response.content))
+                    st.image(img, width=160)
+                except Exception:
+                    st.caption(f"画像読み込み失敗: {image_url}")
+            else:
+                st.write("画像なし")
 
-# 支払い済処理
-if st.button("支払い済"):
-    try:
-        product_id = product.get("商品ID")
-        all_data = sheet.get_all_records()
-        row_index = next((i for i, row in enumerate(all_data) if row.get("商品ID") == product_id), None)
-        if row_index is None:
-            st.error("商品が見つかりませんでした。")
-            st.stop()
+            st.markdown(f"**{item.get('商品名', '不明')}**")
+            st.caption(f"{item.get('価格', '不明')}円 / {item.get('カテゴリ', '不明')}")
+            st.caption(f"投稿日: {item.get('投稿日時', '不明')} / ステータス: {item.get('ステータス', '不明')}")
 
-        sheet.update_cell(row_index + 2, 13, "支払い確認中")  # M列: ステータス
+            status = item.get("ステータス", "")
+            product_id = item.get("商品ID")
 
-        st.success("購入ありがとうございました。出品者にお声かけの上、個人間で商品譲渡の対応をお願いします。")
-    except Exception as e:
-        st.error(f"ステータス更新に失敗しました: {e}")
+            # ✅ 出品中 → 取下げボタン表示
+            if status == "出品中":
+                if st.button("出品を取下げる", key=f"withdraw_{product_id}"):
+                    try:
+                        all_data = sheet.get_all_records()
+                        row_index = next((i for i, row in enumerate(all_data) if row.get("商品ID") == product_id), None)
+                        if row_index is not None:
+                            sheet.update_cell(row_index + 2, 13, "取下げ")  # M列: ステータス
+                            st.success("出品を取下げました。")
+                            st.rerun()
+                        else:
+                            st.error("商品が見つかりませんでした。")
+                    except Exception as e:
+                        st.error(f"ステータス更新に失敗しました: {e}")
 
-# あとで支払う処理
-if st.button("あとで支払う"):
-    st.info("マイページから後ほどお支払いください。")
-    st.switch_page("pages/6_マイページ.py")
+            # ✅ 購入状況に応じた情報表示
+            if status in ["購入手続き中", "支払い確認中", "支払い確認済"]:
+                purchaser = item.get("購入者名", "不明")
+                purchase_time = item.get("購入日時", "不明")
+                st.info(f"🛒 購入者: {purchaser} / 購入日時: {purchase_time}")
+
+                if status == "購入手続き中":
+                    st.warning("⚠️ 支払い処理が完了するまで、物品のお渡しはお待ちください。")
+                else:
+                    st.success("✅ 購入者と個別でやり取りのうえ、物品をお渡しください。")
+else:
+    st.info("出品履歴がありません。")
 
 # フッターメニュー
 st.divider()
@@ -93,3 +101,4 @@ with st.container(horizontal=True):
     st.page_link("app.py", label="ログイン画面")
     st.page_link("pages/2_商品検索.py", label="商品検索")
     st.page_link("pages/3_出品画面.py", label="出品画面")
+    st.page_link("pages/6_マイページ（購入）.py", label="マイページ（購入）")
