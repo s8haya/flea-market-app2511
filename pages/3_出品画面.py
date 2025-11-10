@@ -52,7 +52,7 @@ name = st.text_input("商品名")
 price = st.number_input("価格", min_value=0)
 desc = st.text_area("説明")
 category = st.selectbox("カテゴリ", ["衣類", "雑貨", "本", "その他"])
-image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png", "heic"])
+image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png"])
 submit = st.button("出品する")  # ✅ 修正①
 
 # ✅ 投稿処理
