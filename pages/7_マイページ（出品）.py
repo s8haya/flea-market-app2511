@@ -38,10 +38,23 @@ except Exception as e:
 try:
     raw_data = sheet.get_all_records()
     user_id = str(st.session_state.get("id", "")).strip()
+
+    # ✅ デバッグログ：ログインIDと全データ表示
+    st.divider()
+    st.subheader("🛠 デバッグログ（開発者向け）")
+    st.write("ログインID:", user_id)
+    st.write("取得した全データ:", raw_data)
+
+    # ✅ 出品者IDの一覧表示
+    st.write("出品者ID一覧:", [str(row.get("出品者ID", "")).strip() for row in raw_data])
+
+    # ✅ フィルタ処理
     listed_items = [
         row for row in raw_data
         if str(row.get("出品者ID", "")).strip() == user_id
     ]
+
+    st.write(f"一致した商品数: {len(listed_items)}")
 except Exception as e:
     st.error(f"出品履歴の取得に失敗しました: {e}")
     st.stop()
