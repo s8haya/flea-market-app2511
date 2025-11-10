@@ -55,8 +55,8 @@ if st.session_state.get("logged_in"):
 
 else:
     with st.container():
-        input_id = st.text_input("ユーザーID").strip()
-        input_pass = st.text_input("パスワード", type="password").strip()
+        input_id = st.text_input("ユーザーID：「職員コード6桁」").strip()
+        input_pass = st.text_input("パスワード：「my」＋「職員コード6桁」", type="password").strip()
         login_btn = st.button("ログイン")
 
     if login_btn:

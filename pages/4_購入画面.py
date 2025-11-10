@@ -10,7 +10,7 @@ import pytz
 import time
 
 st.set_page_config(page_title="購入確認", layout="centered")
-st.title("購入確認")
+st.title("購入確認画面")
 
 # ✅ ログインチェック＋ヘッダー
 if st.session_state.get("logged_in"):

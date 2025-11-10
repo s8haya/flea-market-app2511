@@ -13,7 +13,7 @@ import pytz
 import time
 
 st.set_page_config(page_title="出品画面", layout="centered")
-st.title("商品投稿フォーム")
+st.title("出品画面")
 
 # ✅ ログインチェック＋ヘッダー
 if st.session_state.get("logged_in"):
