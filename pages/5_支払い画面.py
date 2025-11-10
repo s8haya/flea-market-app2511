@@ -43,6 +43,9 @@ except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
 
+# ✅ 上部メッセージ
+st.info("寄付金にご協力いただきありがとうございます。支払い後に「支払い済」ボタンを忘れずに押してください。その後、出品者から物品を受領してください。")
+
 # ✅ 商品情報表示
 st.subheader("購入商品情報")
 st.markdown(f"**{product.get('商品名', '不明')}**")
@@ -62,6 +65,9 @@ try:
 except Exception:
     st.error("QRコード画像の読み込みに失敗しました。QRhaya.png が正しく配置されているか確認してください。")
     st.stop()
+
+# ✅ 現金払い案内
+st.caption("現金払いを希望の方は直接「林」まで連絡ください。")
 
 st.divider()
 st.subheader("支払い後の操作")
