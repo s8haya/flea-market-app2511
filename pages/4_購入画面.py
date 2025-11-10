@@ -77,10 +77,14 @@ if st.button("購入する"):
             st.error("商品が見つかりませんでした。")
             st.stop()
 
+        current_status = all_data[row_index].get("ステータス", "")
+        if current_status != "出品中":
+            st.error("ほかの方がすでに購入されたか、商品が取下げられた可能性があります。商品検索画面にお戻りください。")
+            st.stop()
+
         jst = pytz.timezone("Asia/Tokyo")
         now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
 
-        # ✅ update_cell に変更（1行目はヘッダーなので +2）
         sheet.update_cell(row_index + 2, 10, st.session_state.get("id", ""))         # J列: 購入者
         sheet.update_cell(row_index + 2, 11, st.session_state.get("username", ""))   # K列: 購入者名
         sheet.update_cell(row_index + 2, 12, now)                                     # L列: 購入日時
@@ -89,7 +93,7 @@ if st.button("購入する"):
         st.success("購入手続きに進みます")
         st.switch_page("pages/5_支払い画面.py")
     except Exception as e:
-        st.error(f"購入処理に失敗しました: {e}")
+        st.error("ほかの方がすでに購入されたか、商品が取下げられた可能性があります。商品検索画面にお戻りください。")
 
 # キャンセル処理
 if st.button("キャンセルする"):
