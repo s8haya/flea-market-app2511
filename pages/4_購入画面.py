@@ -120,7 +120,7 @@ if st.button("キャンセルする"):
         if current_status in ["出品中", "取下げ"]:
             st.switch_page("pages/2_商品検索.py")
         else:
-            st.warning("すでに商品を購入済み等でキャンセルできません。詳しくは照会先に連絡ください。")
+            st.warning("すでに商品が購入された等の状態です。自身が購入しキャンセルしたい場合は、照会先に連絡ください。そのほかの方は下メニューから商品検索画面にお戻りください。")
     except Exception as e:
         st.error("キャンセル処理中にエラーが発生しました。")
 

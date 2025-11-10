@@ -40,25 +40,26 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
     st.divider()
     st.subheader("下のメニューから画面を選択してください。")
 
-# ログインフォーム
-with st.container():
-    input_id = st.text_input("ユーザーID").strip()
-    input_pass = st.text_input("パスワード", type="password").strip()
-    login_btn = st.button("ログイン")
+else:
+    # ログインフォーム（未ログイン時のみ表示）
+    with st.container():
+        input_id = st.text_input("ユーザーID").strip()
+        input_pass = st.text_input("パスワード", type="password").strip()
+        login_btn = st.button("ログイン")
 
-if login_btn:
-    if input_id in user_dict:
-        expected_pw = user_dict[input_id]["password"]
-        if input_pass == expected_pw:
-            st.session_state["logged_in"] = True
-            st.session_state["id"] = input_id
-            st.session_state["username"] = user_dict[input_id]["username"]
-            st.success(f"{user_dict[input_id]['username']}さん、ようこそ！")
-            st.rerun()
+    if login_btn:
+        if input_id in user_dict:
+            expected_pw = user_dict[input_id]["password"]
+            if input_pass == expected_pw:
+                st.session_state["logged_in"] = True
+                st.session_state["id"] = input_id
+                st.session_state["username"] = user_dict[input_id]["username"]
+                st.success(f"{user_dict[input_id]['username']}さん、ようこそ！")
+                st.rerun()
+            else:
+                st.error("パスワードが間違っています")
         else:
-            st.error("パスワードが間違っています")
-    else:
-        st.error("ユーザーIDが存在しません")
+            st.error("ユーザーIDが存在しません")
 
 # フッターメニュー：Flexbox風レイアウト
 st.divider()
