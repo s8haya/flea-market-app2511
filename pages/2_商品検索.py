@@ -10,7 +10,7 @@ st.set_page_config(page_title="商品検索", layout="centered")
 st.title("商品検索")
 
 # ✅ ログインチェック＋ヘッダー
-if "logged_in" in st.session_state and st.session_state["logged_in"]:
+if st.session_state.get("logged_in"):
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
         if st.button("ログアウト"):
@@ -21,7 +21,8 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
-        st.page_link("app.py")
+        st.switch_page("app.py")
+        st.stop()
     st.stop()
 
 # ✅ OAuth認証（分離＋例外処理）
@@ -98,11 +99,12 @@ if filtered:
                         if product_id:
                             if st.button("購入する", key=f"buy_{product_id}"):
                                 st.session_state["selected_product"] = item
-                                st.page_link("pages/4_購入画面.py")
+                                st.switch_page("pages/4_購入画面.py")
+                                st.stop()
 else:
     st.warning("該当する商品が見つかりませんでした。")
 
-# ✅ フッターメニュー
+# ✅ フッターメニュー（リンク専用）
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
