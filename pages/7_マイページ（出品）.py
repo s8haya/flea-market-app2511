@@ -67,14 +67,14 @@ if listed_items:
             st.caption(f"投稿日: {item.get('投稿日時', '不明')} / ステータス: {item.get('ステータス', '不明')}")
 
             status = item.get("ステータス", "")
-            product_id = item.get("商品ID")
+            product_id = str(item.get("商品ID", "")).strip()
 
             # ✅ 出品中 → 取下げボタン表示
             if status == "出品中":
                 if st.button("出品を取下げる", key=f"withdraw_{product_id}"):
                     try:
                         all_data = sheet.get_all_records()
-                        row_index = next((i for i, row in enumerate(all_data) if str(row.get("商品ID")) == str(product_id)), None)
+                        row_index = next((i for i, row in enumerate(all_data) if str(row.get("商品ID", "")).strip() == product_id), None)
                         if row_index is not None:
                             sheet.update_cell(row_index + 2, 13, "取下げ")  # M列: ステータス
                             st.success("出品を取下げました。")
