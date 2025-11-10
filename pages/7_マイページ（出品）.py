@@ -38,7 +38,10 @@ except Exception as e:
 try:
     raw_data = sheet.get_all_records()
     user_id = str(st.session_state.get("id", "")).strip()
-    listed_items = [row for row in raw_data if str(row.get("出品者ID", "")).strip() == user_id]
+    listed_items = [
+        row for row in raw_data
+        if str(row.get("出品者ID", "")).strip() == user_id
+    ]
 except Exception as e:
     st.error(f"出品履歴の取得に失敗しました: {e}")
     st.stop()
@@ -71,7 +74,7 @@ if listed_items:
                 if st.button("出品を取下げる", key=f"withdraw_{product_id}"):
                     try:
                         all_data = sheet.get_all_records()
-                        row_index = next((i for i, row in enumerate(all_data) if row.get("商品ID") == product_id), None)
+                        row_index = next((i for i, row in enumerate(all_data) if str(row.get("商品ID")) == str(product_id)), None)
                         if row_index is not None:
                             sheet.update_cell(row_index + 2, 13, "取下げ")  # M列: ステータス
                             st.success("出品を取下げました。")
