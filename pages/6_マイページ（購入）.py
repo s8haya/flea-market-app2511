@@ -146,6 +146,13 @@ if purchased_items:
 else:
     st.info("購入履歴がありません。")
 
+st.divider()
+st.subheader("📦 マイページ（購入）に戻る")
+
+if st.button("購入一覧に戻る"):
+    st.session_state["view"] = "list"
+    st.rerun()
+
 # フッターメニュー
 st.divider()
 st.markdown("### 📌 メニュー")
