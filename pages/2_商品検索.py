@@ -2,7 +2,7 @@ import streamlit as st
 import gspread
 import json
 import requests
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 import io
 from google.oauth2.credentials import Credentials
 from datetime import datetime
@@ -53,7 +53,7 @@ data = load_product_data()
 if not data:
     st.stop()
 
-# ✅ 検索・絞り込みUI
+# ✅ 検索・絞り込みUI（幅統一）
 with st.container():
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -63,11 +63,13 @@ with st.container():
     with col3:
         seller_filter = st.selectbox("👤 出品者絞り込み", ["すべて"] + sorted(set(row.get("出品者名", "") for row in data)))
 
-    col4, col5 = st.columns([2, 2])
+    col4, col5, col6 = st.columns(3)
     with col4:
         status_filter = st.selectbox("📌 出品ステータス", ["すべて", "出品中のみ", "その他（取下げ以外）"])
     with col5:
         sort_option = st.radio("並び順", ["新着順", "価格が安い順", "価格が高い順"], horizontal=True)
+    with col6:
+        st.empty()  # レイアウト調整用
 
 # ✅ 絞り込み処理
 filtered = data
