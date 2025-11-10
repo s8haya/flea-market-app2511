@@ -47,12 +47,20 @@ except Exception as e:
 user_id = st.session_state.get("id", "")
 username = st.session_state.get("username", "不明")
 
-# ✅ 入力フォーム
-name = st.text_input("商品名")
-price = st.number_input("価格", min_value=0)
-desc = st.text_area("説明")
-category = st.selectbox("カテゴリ", ["衣類", "雑貨", "本", "その他"])
-image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png", "heic"])
+# ✅ 入力初期化（初回のみ）
+if "form_name" not in st.session_state:
+    st.session_state["form_name"] = ""
+    st.session_state["form_price"] = 0
+    st.session_state["form_desc"] = ""
+    st.session_state["form_category"] = "衣類"
+    st.session_state["form_image"] = None
+
+# ✅ 入力フォーム（session_state経由）
+name = st.text_input("商品名", value=st.session_state["form_name"], key="form_name")
+price = st.number_input("価格", min_value=0, value=st.session_state["form_price"], key="form_price")
+desc = st.text_area("説明", value=st.session_state["form_desc"], key="form_desc")
+category = st.selectbox("カテゴリ", ["衣類", "雑貨", "本", "その他"], index=["衣類", "雑貨", "本", "その他"].index(st.session_state["form_category"]), key="form_category")
+image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png"], key="form_image")
 submit = st.button("投稿する")
 
 # ✅ 投稿処理
@@ -116,6 +124,13 @@ if submit:
         sheet.append_row(new_row)
         time.sleep(1)
         st.success("商品を投稿しました！")
+
+        # ✅ 入力初期化
+        st.session_state["form_name"] = ""
+        st.session_state["form_price"] = 0
+        st.session_state["form_desc"] = ""
+        st.session_state["form_category"] = "衣類"
+        st.session_state["form_image"] = None
     except Exception as e:
         st.error(f"商品情報の登録に失敗しました: {e}")
 
