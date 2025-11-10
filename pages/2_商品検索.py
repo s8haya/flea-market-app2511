@@ -7,8 +7,9 @@ import io
 from google.oauth2.credentials import Credentials
 
 st.set_page_config(page_title="商品検索", layout="centered")
+st.title("商品検索")
 
-# ログインチェック＋ヘッダー
+# ✅ ログインチェック＋ヘッダー
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
@@ -20,37 +21,41 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
-        st.switch_page("app.py")
+        st.page_link("app.py")
     st.stop()
 
-st.title("商品検索")
-
-# OAuth認証
+# ✅ OAuth認証（分離＋例外処理）
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
     gc = gspread.authorize(creds)
-    sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
 except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
 
-# データ取得＋ステータスフィルタ（取下げ除外）
-try:
-    raw_data = sheet.get_all_records()
-    data = [
-        row for row in raw_data
-        if row.get("商品名") and row.get("価格") and row.get("画像URL") and row.get("ステータス") != "取下げ"
-    ]
-except Exception as e:
-    st.error(f"商品データの取得に失敗しました: {e}")
+# ✅ 商品データ取得（キャッシュ化）
+@st.cache_data(ttl=30)
+def load_product_data():
+    try:
+        sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
+        raw_data = sheet.get_all_records()
+        return [
+            row for row in raw_data
+            if row.get("商品名") and row.get("価格") and row.get("画像URL") and row.get("ステータス") != "取下げ"
+        ]
+    except Exception as e:
+        st.error(f"商品データの取得に失敗しました: {e}")
+        return []
+
+data = load_product_data()
+if not data:
     st.stop()
 
-# 検索UI
+# ✅ 検索UI
 search = st.text_input("商品名で検索")
 filtered = [item for item in data if search.lower() in item.get("商品名", "").lower()] if search else data
 
-# 画像トリミング関数（中央正方形）
+# ✅ 画像トリミング関数（中央正方形）
 def crop_center_square(img):
     width, height = img.size
     min_dim = min(width, height)
@@ -60,9 +65,9 @@ def crop_center_square(img):
     bottom = top + min_dim
     return img.crop((left, top, right, bottom))
 
-# 商品表示（カード風グリッド）
+# ✅ 商品表示（カード風グリッド）
 if filtered:
-    num_cols = 2  # スマホでも2列対応
+    num_cols = 2
     for i in range(0, len(filtered), num_cols):
         row_items = filtered[i:i+num_cols]
         cols = st.columns(len(row_items))
@@ -88,17 +93,16 @@ if filtered:
                     st.caption(f"{item.get('出品者名', '不明')} / {item.get('投稿日時', '不明')}")
                     st.caption(f"ステータス: {item.get('ステータス', '不明')}")
 
-                    # ✅ 出品中のみ購入ボタンを表示
                     if item.get("ステータス") == "出品中":
                         product_id = item.get("商品ID")
                         if product_id:
                             if st.button("購入する", key=f"buy_{product_id}"):
                                 st.session_state["selected_product"] = item
-                                st.switch_page("pages/4_購入画面.py")
+                                st.page_link("pages/4_購入画面.py")
 else:
     st.warning("該当する商品が見つかりませんでした。")
 
-# フッターメニュー
+# ✅ フッターメニュー
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
