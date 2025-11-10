@@ -47,29 +47,12 @@ except Exception as e:
 user_id = st.session_state.get("id", "")
 username = st.session_state.get("username", "不明")
 
-# ✅ 投稿済み確認メッセージ
-if "last_posted" in st.session_state:
-    st.success("商品を投稿しました！")
-    st.warning("同じ商品をもう一度出品しますか？")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("はい、もう一度出品する"):
-            st.session_state.pop("last_posted")
-            st.rerun()
-    with col2:
-        if st.button("いいえ、出品を終了する"):
-            st.session_state.pop("last_posted")
-            st.switch_page("pages/7_マイページ（出品）.py")
-    st.stop()
-
 # ✅ 入力フォーム
 name = st.text_input("商品名")
 price = st.number_input("価格", min_value=0)
 desc = st.text_area("説明")
 category = st.selectbox("カテゴリ", ["衣類", "雑貨", "本", "その他"])
 image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png", "heic"])
-
-# ✅ 投稿ボタン（投稿済み状態では非表示）
 submit = st.button("投稿する")
 
 # ✅ 投稿処理
@@ -132,14 +115,7 @@ if submit:
     try:
         sheet.append_row(new_row)
         time.sleep(1)
-        st.session_state["last_posted"] = {
-            "name": name,
-            "price": price,
-            "desc": desc,
-            "category": category,
-            "image_url": image_url
-        }
-        st.rerun()
+        st.success("商品を投稿しました！")
     except Exception as e:
         st.error(f"商品情報の登録に失敗しました: {e}")
 
