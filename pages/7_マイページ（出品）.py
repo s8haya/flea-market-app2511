@@ -5,12 +5,13 @@ import requests
 from PIL import Image
 import io
 from google.oauth2.credentials import Credentials
+import time
 
 st.set_page_config(page_title="マイページ（出品）", layout="centered")
 st.title("マイページ（出品）")
 
-# ログインチェック
-if "logged_in" in st.session_state and st.session_state["logged_in"]:
+# ✅ ログインチェック＋ヘッダー
+if st.session_state.get("logged_in"):
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
         if st.button("ログアウト"):
@@ -21,10 +22,11 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
-        st.page_link("app.py")
+        st.switch_page("app.py")
+        st.stop()
     st.stop()
 
-# OAuth認証
+# ✅ OAuth認証
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
@@ -34,21 +36,16 @@ except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
 
-# 商品データ取得
+# ✅ 商品データ取得
 try:
     raw_data = sheet.get_all_records()
     user_id = str(st.session_state.get("id", "")).strip()
-
-    # ✅ 正しい列名「出品者」で照合
-    listed_items = [
-        row for row in raw_data
-        if str(row.get("出品者", "")).strip() == user_id
-    ]
+    listed_items = [row for row in raw_data if str(row.get("出品者", "")).strip() == user_id]
 except Exception as e:
     st.error(f"出品履歴の取得に失敗しました: {e}")
     st.stop()
 
-# 商品表示
+# ✅ 商品表示
 if listed_items:
     st.subheader("出品した商品一覧")
     for item in listed_items:
@@ -79,6 +76,7 @@ if listed_items:
                         row_index = next((i for i, row in enumerate(all_data) if str(row.get("商品ID", "")).strip() == product_id), None)
                         if row_index is not None:
                             sheet.update_cell(row_index + 2, 13, "取下げ")  # M列: ステータス
+                            time.sleep(1)
                             st.success("出品を取下げました。")
                             st.rerun()
                         else:
@@ -99,7 +97,7 @@ if listed_items:
 else:
     st.info("出品履歴がありません。")
 
-# フッターメニュー
+# ✅ フッターメニュー（リンク専用）
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
