@@ -84,7 +84,7 @@ if st.button("支払い済"):
 # あとで支払う処理
 if st.button("あとで支払う"):
     st.info("マイページから後ほどお支払いください。")
-    st.switch_page("pages/6_マイページ（購入）.py")
+    st.switch_page("pages/6_マイページ.py")
 
 # フッターメニュー
 st.divider()
