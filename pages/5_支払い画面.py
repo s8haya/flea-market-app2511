@@ -10,17 +10,8 @@ import time
 st.set_page_config(page_title="支払い画面", layout="centered")
 st.title("支払い画面")
 
-# ✅ ページ遷移フラグを確認
-if "current_page" in st.session_state:
-    if st.session_state["current_page"] == "支払い画面":
-        st.session_state.pop("current_page")
-    elif st.session_state["current_page"] == "マイページ（購入）":
-        st.session_state.pop("current_page")
-        st.write("👉 マイページ（購入）に戻ります。左のメニューから選択してください。")
-        st.stop()
-
 # ✅ ログインチェック＋ヘッダー
-if "logged_in" in st.session_state and st.session_state["logged_in"]:
+if st.session_state.get("logged_in"):
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
         if st.button("ログアウト"):
@@ -31,16 +22,16 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
-        st.session_state["current_page"] = "ログイン画面"
-        st.rerun()
+        st.switch_page("app.py")
+        st.stop()
     st.stop()
 
 # ✅ 商品情報の取得
 product = st.session_state.get("selected_product")
 if not product:
     st.warning("商品情報が見つかりませんでした。")
-    st.session_state["current_page"] = "商品検索"
-    st.rerun()
+    st.switch_page("pages/2_商品検索.py")
+    st.stop()
 
 # ✅ OAuth認証
 try:
@@ -99,10 +90,10 @@ if st.button("支払い済"):
 # ✅ あとで支払う処理
 if st.button("あとで支払う"):
     st.info("マイページから後ほどお支払いください。")
-    st.session_state["current_page"] = "マイページ（購入）"
-    st.rerun()
+    st.switch_page("pages/6_マイページ（購入）.py")
+    st.stop()
 
-# ✅ フッターメニュー
+# ✅ フッターメニュー（リンク専用）
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
