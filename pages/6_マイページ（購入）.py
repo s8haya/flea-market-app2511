@@ -10,7 +10,6 @@ st.set_page_config(page_title="マイページ（購入）", layout="centered")
 
 # ✅ 画面切り替え判定
 if st.session_state.get("view") == "payment":
-    # 支払い画面を描画
     product = st.session_state.get("selected_product")
     if not product:
         st.warning("商品情報が見つかりませんでした。")
@@ -67,6 +66,13 @@ if st.session_state.get("view") == "payment":
 
     # あとで支払う
     if st.button("あとで支払う"):
+        st.session_state["view"] = "list"
+        st.rerun()
+
+    st.divider()
+    st.subheader("📦 マイページ（購入）に戻る")
+
+    if st.button("購入一覧に戻る"):
         st.session_state["view"] = "list"
         st.rerun()
 
@@ -145,13 +151,6 @@ if purchased_items:
                     st.rerun()
 else:
     st.info("購入履歴がありません。")
-
-st.divider()
-st.subheader("📦 マイページ（購入）に戻る")
-
-if st.button("購入一覧に戻る"):
-    st.session_state["view"] = "list"
-    st.rerun()
 
 # フッターメニュー
 st.divider()
