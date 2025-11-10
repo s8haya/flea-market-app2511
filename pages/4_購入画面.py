@@ -13,7 +13,7 @@ st.set_page_config(page_title="購入確認", layout="centered")
 st.title("購入確認")
 
 # ✅ ログインチェック＋ヘッダー
-if "logged_in" in st.session_state and st.session_state["logged_in"]:
+if st.session_state.get("logged_in"):
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
         if st.button("ログアウト"):
@@ -24,14 +24,15 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
-        st.page_link("app.py")
+        st.switch_page("app.py")
+        st.stop()
     st.stop()
 
 # ✅ 商品情報の取得
 product = st.session_state.get("selected_product")
 if not product:
     st.warning("商品情報が見つかりませんでした。")
-    st.page_link("pages/2_商品検索.py")
+    st.switch_page("pages/2_商品検索.py")
     st.stop()
 
 # ✅ OAuth認証
@@ -93,22 +94,25 @@ if st.button("購入する"):
                 sheet.update_cell(row_index + 2, 13, "購入手続き中")                        # M列: ステータス
                 time.sleep(1)
                 st.success("購入手続きに進みます")
-                st.page_link("pages/5_支払い画面.py")
+                st.switch_page("pages/5_支払い画面.py")
+                st.stop()
             except Exception as e:
                 st.error("購入処理中にエラーが発生しました。もう一度お試しください。")
 
         elif current_buyer_id == current_user_id:
             st.success("購入済みの商品です。支払い画面に進みます")
-            st.page_link("pages/5_支払い画面.py")
+            st.switch_page("pages/5_支払い画面.py")
+            st.stop()
 
         else:
             st.error("ほかの方がすでに購入されたか、商品が取下げられた可能性があります。")
-            st.page_link("pages/2_商品検索.py")
+            st.switch_page("pages/2_商品検索.py")
             st.stop()
 
     except Exception as e:
         st.error("購入処理中にエラーが発生しました。")
-        st.page_link("pages/2_商品検索.py")
+        st.switch_page("pages/2_商品検索.py")
+        st.stop()
 
 # ✅ キャンセル処理
 if st.button("キャンセルする"):
@@ -122,13 +126,14 @@ if st.button("キャンセルする"):
 
         current_status = all_data[row_index].get("ステータス", "")
         if current_status in ["出品中", "取下げ"]:
-            st.page_link("pages/2_商品検索.py")
+            st.switch_page("pages/2_商品検索.py")
+            st.stop()
         else:
             st.warning("すでに商品が購入された等の状態です。照会先に連絡してください。")
     except Exception as e:
         st.error("キャンセル処理中にエラーが発生しました。")
 
-# ✅ フッターメニュー
+# ✅ フッターメニュー（リンク専用）
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
