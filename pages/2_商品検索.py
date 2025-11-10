@@ -8,7 +8,6 @@ from google.oauth2.credentials import Credentials
 from datetime import datetime
 
 st.set_page_config(page_title="商品検索", layout="centered")
-st.title("商品検索画面")
 
 # ✅ ログインチェック＋ヘッダー
 if st.session_state.get("logged_in"):
