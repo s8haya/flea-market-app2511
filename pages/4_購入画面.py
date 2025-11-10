@@ -77,18 +77,24 @@ if st.button("購入する"):
             st.error("商品が見つかりませんでした。")
             st.stop()
 
-        current_status = all_data[row_index].get("ステータス", "")
-        if current_status != "出品中":
+        current_row = all_data[row_index]
+        current_status = current_row.get("ステータス", "")
+        current_buyer_id = current_row.get("購入者", "")
+
+        # ✅ 出品中 または 自分が購入者 の場合のみ許可
+        if current_status != "出品中" and current_buyer_id != st.session_state.get("id", ""):
             st.error("ほかの方がすでに購入されたか、商品が取下げられた可能性があります。商品検索画面にお戻りください。")
             st.stop()
 
-        jst = pytz.timezone("Asia/Tokyo")
-        now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
+        # ✅ 出品中なら購入処理を実行（購入者情報を記録）
+        if current_status == "出品中":
+            jst = pytz.timezone("Asia/Tokyo")
+            now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
 
-        sheet.update_cell(row_index + 2, 10, st.session_state.get("id", ""))         # J列: 購入者
-        sheet.update_cell(row_index + 2, 11, st.session_state.get("username", ""))   # K列: 購入者名
-        sheet.update_cell(row_index + 2, 12, now)                                     # L列: 購入日時
-        sheet.update_cell(row_index + 2, 13, "購入手続き中")                          # M列: ステータス
+            sheet.update_cell(row_index + 2, 10, st.session_state.get("id", ""))         # J列: 購入者
+            sheet.update_cell(row_index + 2, 11, st.session_state.get("username", ""))   # K列: 購入者名
+            sheet.update_cell(row_index + 2, 12, now)                                     # L列: 購入日時
+            sheet.update_cell(row_index + 2, 13, "購入手続き中")                          # M列: ステータス
 
         st.success("購入手続きに進みます")
         st.switch_page("pages/5_支払い画面.py")
