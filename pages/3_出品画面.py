@@ -53,7 +53,7 @@ price = st.number_input("価格", min_value=0)
 desc = st.text_area("説明")
 category = st.selectbox("カテゴリ", ["衣類", "雑貨", "本", "その他"])
 image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png", "heic"])
-submit = st.button("投稿する")
+submit = st.button("出品する")  # ✅ 修正①
 
 # ✅ 投稿処理
 if submit:
@@ -115,7 +115,11 @@ if submit:
     try:
         sheet.append_row(new_row)
         time.sleep(1)
-        st.success("商品を投稿しました！")
+        st.success("商品を出品しました！")  # ✅ 修正②
+
+        # ✅ 修正③：マイページ（出品）への導線
+        if st.button("マイページ（出品）へ移動"):
+            st.switch_page("pages/7_マイページ（出品）.py")
     except Exception as e:
         st.error(f"商品情報の登録に失敗しました: {e}")
 
