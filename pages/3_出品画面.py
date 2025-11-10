@@ -31,6 +31,14 @@ else:
         st.stop()
     st.stop()
 
+# ✅ 投稿完了後のメッセージと遷移ボタン（再描画後に表示）
+if st.session_state.get("posted"):
+    st.success("商品を出品しました！")
+    if st.button("マイページ（出品）へ移動"):
+        st.session_state.pop("posted")
+        st.switch_page("pages/7_マイページ（出品）.py")
+    st.stop()
+
 # ✅ OAuth認証とサービス初期化
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
@@ -53,16 +61,12 @@ price = st.number_input("価格", min_value=0)
 desc = st.text_area("説明")
 category = st.selectbox("カテゴリ", ["衣類", "雑貨", "本", "その他"])
 image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png"])
-submit = st.button("出品する")  # ✅ 修正①
+submit = st.button("出品する")
 
 # ✅ 投稿処理
 if submit:
     if not name or not price or not desc or not image_file:
         st.warning("商品名・価格・説明・画像はすべて必須です。")
-        st.stop()
-
-    if image_file.name.lower().endswith(".heic"):
-        st.error("HEIC形式の画像は現在サポートされていません。JPEGまたはPNG形式でアップロードしてください。")
         st.stop()
 
     try:
@@ -115,11 +119,8 @@ if submit:
     try:
         sheet.append_row(new_row)
         time.sleep(1)
-        st.success("商品を出品しました！")  # ✅ 修正②
-
-        # ✅ 修正③：マイページ（出品）への導線
-        if st.button("マイページ（出品）へ移動"):
-            st.switch_page("pages/7_マイページ（出品）.py")
+        st.session_state["posted"] = True  # ✅ 投稿完了フラグ
+        st.rerun()  # ✅ 再描画でボタン表示へ
     except Exception as e:
         st.error(f"商品情報の登録に失敗しました: {e}")
 
