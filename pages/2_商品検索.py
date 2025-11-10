@@ -25,7 +25,7 @@ else:
         st.stop()
     st.stop()
 
-# ✅ OAuth認証（分離＋例外処理）
+# ✅ OAuth認証
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
@@ -35,7 +35,7 @@ except Exception as e:
     st.stop()
 
 # ✅ 商品データ取得（キャッシュ化）
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=60)
 def load_product_data():
     try:
         sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
@@ -56,7 +56,33 @@ if not data:
 search = st.text_input("商品名で検索")
 filtered = [item for item in data if search.lower() in item.get("商品名", "").lower()] if search else data
 
-# ✅ 画像トリミング関数（中央正方形）
+# ✅ ページネーション設定
+ITEMS_PER_PAGE = 6
+total_pages = (len(filtered) - 1) // ITEMS_PER_PAGE + 1
+if "page" not in st.session_state:
+    st.session_state["page"] = 1
+
+# ✅ ページ切り替えUI
+col1, col2, col3 = st.columns([1, 2, 1])
+with col1:
+    if st.session_state["page"] > 1:
+        if st.button("← 前へ"):
+            st.session_state["page"] -= 1
+            st.rerun()
+with col3:
+    if st.session_state["page"] < total_pages:
+        if st.button("次へ →"):
+            st.session_state["page"] += 1
+            st.rerun()
+with col2:
+    st.markdown(f"ページ {st.session_state['page']} / {total_pages}", unsafe_allow_html=True)
+
+# ✅ 表示対象アイテム抽出
+start_idx = (st.session_state["page"] - 1) * ITEMS_PER_PAGE
+end_idx = start_idx + ITEMS_PER_PAGE
+page_items = filtered[start_idx:end_idx]
+
+# ✅ 画像トリミング関数
 def crop_center_square(img):
     width, height = img.size
     min_dim = min(width, height)
@@ -67,10 +93,10 @@ def crop_center_square(img):
     return img.crop((left, top, right, bottom))
 
 # ✅ 商品表示（カード風グリッド）
-if filtered:
+if page_items:
     num_cols = 2
-    for i in range(0, len(filtered), num_cols):
-        row_items = filtered[i:i+num_cols]
+    for i in range(0, len(page_items), num_cols):
+        row_items = page_items[i:i+num_cols]
         cols = st.columns(len(row_items))
         for col, item in zip(cols, row_items):
             with col:
@@ -78,7 +104,7 @@ if filtered:
                     image_url = item.get("画像URL", "")
                     if image_url:
                         try:
-                            response = requests.get(image_url)
+                            response = requests.get(image_url, timeout=3)
                             img = Image.open(io.BytesIO(response.content))
                             img = crop_center_square(img)
                             img = img.resize((160, 160))
