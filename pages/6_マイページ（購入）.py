@@ -9,6 +9,11 @@ from google.oauth2.credentials import Credentials
 st.set_page_config(page_title="マイページ（購入）", layout="centered")
 st.title("マイページ（購入）")
 
+# ✅ ページ冒頭で支払い画面への遷移を判定
+if "redirect_to_payment" in st.session_state and st.session_state.get("selected_product"):
+    st.session_state.pop("redirect_to_payment")
+    st.switch_page("支払い画面")
+
 # ログインチェック＋ヘッダー
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
     with st.container(horizontal=True):
@@ -66,9 +71,10 @@ if purchased_items:
 
             # ✅ 支払い手続き中なら支払い画面へ遷移ボタン表示
             if item.get("ステータス") == "購入手続き中":
-                if st.button("支払い画面へ", key=f"pay_{item.get('商品ID')}"):
+                if st.button("支払い画面へ進む", key=f"pay_{item.get('商品ID')}"):
                     st.session_state["selected_product"] = item
-                    st.switch_page("支払い画面")  # ← page_title="支払い画面" に一致させること
+                    st.session_state["redirect_to_payment"] = True
+                    st.experimental_rerun()
 else:
     st.info("購入履歴がありません。")
 
