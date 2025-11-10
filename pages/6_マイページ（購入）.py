@@ -9,6 +9,11 @@ from google.oauth2.credentials import Credentials
 st.set_page_config(page_title="マイページ（購入）", layout="centered")
 st.title("マイページ（購入）")
 
+# ✅ ページ遷移フラグを確認（支払い画面へ）
+if "current_page" in st.session_state and st.session_state["current_page"] == "支払い画面":
+    st.session_state.pop("current_page")
+    st.stop()  # 支払い画面側で処理を継続するため、ここでは止める
+
 # ログインチェック＋ヘッダー
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
     with st.container(horizontal=True):
@@ -21,7 +26,8 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
-        st.switch_page("app.py")
+        st.session_state["current_page"] = "ログイン画面"
+        st.rerun()
     st.stop()
 
 # OAuth認証
@@ -64,13 +70,12 @@ if purchased_items:
             st.caption(f"出品者: {item.get('出品者名', '不明')} / 投稿日: {item.get('投稿日時', '不明')}")
             st.caption(f"ステータス: {item.get('ステータス', '不明')}")
 
-            # ✅ 支払い手続き中なら支払い画面へ遷移ボタン表示
+            # ✅ 支払い手続き中なら支払い画面へ遷移フラグをセット
             if item.get("ステータス") == "購入手続き中":
                 if st.button("支払い画面へ進む", key=f"pay_{item.get('商品ID')}"):
                     st.session_state["selected_product"] = item
-                    st.switch_page("支払い画面")  # ← page_title に一致していることを確認
+                    st.session_state["current_page"] = "支払い画面"
                     st.rerun()
-
 else:
     st.info("購入履歴がありません。")
 
