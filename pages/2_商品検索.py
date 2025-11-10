@@ -63,7 +63,11 @@ with st.container():
     with col3:
         seller_filter = st.selectbox("👤 出品者絞り込み", ["すべて"] + sorted(set(row.get("出品者名", "") for row in data)))
 
-    sort_option = st.radio("並び順", ["新着順", "価格が安い順", "価格が高い順"], horizontal=True)
+    col4, col5 = st.columns([2, 2])
+    with col4:
+        status_filter = st.selectbox("📌 出品ステータス", ["すべて", "出品中のみ", "その他（取下げ以外）"])
+    with col5:
+        sort_option = st.radio("並び順", ["新着順", "価格が安い順", "価格が高い順"], horizontal=True)
 
 # ✅ 絞り込み処理
 filtered = data
@@ -73,6 +77,10 @@ if category_filter != "すべて":
     filtered = [item for item in filtered if item.get("カテゴリ") == category_filter]
 if seller_filter != "すべて":
     filtered = [item for item in filtered if item.get("出品者名") == seller_filter]
+if status_filter == "出品中のみ":
+    filtered = [item for item in filtered if item.get("ステータス") == "出品中"]
+elif status_filter == "その他（取下げ以外）":
+    filtered = [item for item in filtered if item.get("ステータス") not in ["出品中", "取下げ"]]
 
 # ✅ 並び替え処理
 def parse_datetime(dt_str):
