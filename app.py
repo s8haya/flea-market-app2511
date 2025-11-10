@@ -41,7 +41,7 @@ user_dict = {
 }
 
 # ✅ ログイン状態の分岐
-if "logged_in" in st.session_state and st.session_state["logged_in"]:
+if st.session_state.get("logged_in"):
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
         if st.button("ログアウト"):
@@ -49,6 +49,7 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
             st.session_state.pop("id", None)
             st.session_state.pop("username", None)
             st.rerun()
+
     st.divider()
     st.subheader("下のメニューから画面を選択してください。")
 
@@ -72,7 +73,7 @@ else:
         else:
             st.error("ユーザーIDが存在しません")
 
-# ✅ フッターメニュー
+# ✅ フッターメニュー（リンク専用）
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
