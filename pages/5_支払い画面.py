@@ -9,9 +9,16 @@ import pytz
 st.set_page_config(page_title="支払い画面", layout="centered")
 
 # ✅ ページ遷移フラグを確認
-if "current_page" in st.session_state and st.session_state["current_page"] == "支払い画面":
-    # 一度だけ消す
-    st.session_state.pop("current_page")
+if "current_page" in st.session_state:
+    if st.session_state["current_page"] == "支払い画面":
+        # 一度だけ消す
+        st.session_state.pop("current_page")
+
+    elif st.session_state["current_page"] == "マイページ（購入）":
+        st.session_state.pop("current_page")
+        # rerunではなく switch_page を避けるため、ここで直接ページリンクを表示
+        st.write("👉 マイページ（購入）に戻ります。左のメニューから選択してください。")
+        st.stop()
 
 # ログインチェック＋ヘッダー
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
@@ -25,7 +32,8 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
-        st.switch_page("app.py")
+        st.session_state["current_page"] = "ログイン画面"
+        st.rerun()
     st.stop()
 
 st.title("支払い画面")
@@ -34,8 +42,8 @@ st.title("支払い画面")
 product = st.session_state.get("selected_product")
 if not product:
     st.warning("商品情報が見つかりませんでした。")
-    st.switch_page("pages/2_商品検索.py")
-    st.stop()
+    st.session_state["current_page"] = "商品検索"
+    st.rerun()
 
 # OAuth認証
 try:
@@ -86,16 +94,11 @@ if st.button("支払い済"):
     except Exception as e:
         st.error(f"ステータス更新に失敗しました: {e}")
 
-# あとで支払う処理（switch_pageを直接呼ばず、フラグ＋rerun方式）
+# あとで支払う処理（switch_pageを使わずフラグ＋rerun）
 if st.button("あとで支払う"):
     st.info("マイページから後ほどお支払いください。")
     st.session_state["current_page"] = "マイページ（購入）"
     st.rerun()
-
-# ✅ ページ冒頭で「マイページ（購入）」に飛ばす処理
-if "current_page" in st.session_state and st.session_state["current_page"] == "マイページ（購入）":
-    st.session_state.pop("current_page")
-    st.switch_page("6_マイページ（購入）")
 
 # フッターメニュー
 st.divider()
@@ -104,3 +107,5 @@ with st.container(horizontal=True):
     st.page_link("app.py", label="ログイン画面")
     st.page_link("pages/2_商品検索.py", label="商品検索")
     st.page_link("pages/3_出品画面.py", label="出品画面")
+    st.page_link("pages/6_マイページ（購入）.py", label="マイページ（購入）")
+    st.page_link("pages/7_マイページ（出品）.py", label="マイページ（出品）")
