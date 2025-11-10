@@ -5,22 +5,21 @@ from PIL import Image
 from datetime import datetime
 from google.oauth2.credentials import Credentials
 import pytz
+import time
 
 st.set_page_config(page_title="支払い画面", layout="centered")
+st.title("支払い画面")
 
 # ✅ ページ遷移フラグを確認
 if "current_page" in st.session_state:
     if st.session_state["current_page"] == "支払い画面":
-        # 一度だけ消す
         st.session_state.pop("current_page")
-
     elif st.session_state["current_page"] == "マイページ（購入）":
         st.session_state.pop("current_page")
-        # rerunではなく switch_page を避けるため、ここで直接ページリンクを表示
         st.write("👉 マイページ（購入）に戻ります。左のメニューから選択してください。")
         st.stop()
 
-# ログインチェック＋ヘッダー
+# ✅ ログインチェック＋ヘッダー
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
@@ -36,16 +35,14 @@ else:
         st.rerun()
     st.stop()
 
-st.title("支払い画面")
-
-# 商品情報の取得
+# ✅ 商品情報の取得
 product = st.session_state.get("selected_product")
 if not product:
     st.warning("商品情報が見つかりませんでした。")
     st.session_state["current_page"] = "商品検索"
     st.rerun()
 
-# OAuth認証
+# ✅ OAuth認証
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
@@ -55,7 +52,7 @@ except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
 
-# 商品情報表示
+# ✅ 商品情報表示
 st.subheader("購入商品情報")
 st.markdown(f"**{product.get('商品名', '不明')}**")
 st.write(f"価格: {product.get('価格', '不明')}円")
@@ -67,7 +64,7 @@ st.caption(f"ステータス: {product.get('ステータス', '不明')}")
 st.divider()
 st.subheader("以下のQRコードからお支払いください")
 
-# QRコード表示（同階層にQRhaya.pngがある前提）
+# ✅ QRコード表示
 try:
     qr_image = Image.open("QRhaya.png")
     st.image(qr_image, width=240)
@@ -78,7 +75,7 @@ except Exception:
 st.divider()
 st.subheader("支払い後の操作")
 
-# 支払い済処理
+# ✅ 支払い済処理
 if st.button("支払い済"):
     try:
         product_id = product.get("商品ID")
@@ -88,19 +85,24 @@ if st.button("支払い済"):
             st.error("商品が見つかりませんでした。")
             st.stop()
 
-        sheet.update_cell(row_index + 2, 13, "支払い確認中")  # M列: ステータス
+        current_status = all_data[row_index].get("ステータス", "")
+        if current_status != "購入手続き中":
+            st.warning("現在のステータスでは支払い処理を受け付けられません。")
+            st.stop()
 
+        sheet.update_cell(row_index + 2, 13, "支払い確認中")  # M列: ステータス
+        time.sleep(1)
         st.success("購入ありがとうございました。出品者にお声かけの上、個人間で商品譲渡の対応をお願いします。")
     except Exception as e:
         st.error(f"ステータス更新に失敗しました: {e}")
 
-# あとで支払う処理（switch_pageを使わずフラグ＋rerun）
+# ✅ あとで支払う処理
 if st.button("あとで支払う"):
     st.info("マイページから後ほどお支払いください。")
     st.session_state["current_page"] = "マイページ（購入）"
     st.rerun()
 
-# フッターメニュー
+# ✅ フッターメニュー
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):

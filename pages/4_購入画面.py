@@ -7,10 +7,12 @@ import io
 from datetime import datetime
 from google.oauth2.credentials import Credentials
 import pytz
+import time
 
 st.set_page_config(page_title="購入確認", layout="centered")
+st.title("購入確認")
 
-# ログインチェック＋ヘッダー
+# ✅ ログインチェック＋ヘッダー
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
@@ -22,19 +24,17 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
-        st.switch_page("app.py")
+        st.page_link("app.py")
     st.stop()
 
-st.title("購入確認")
-
-# 商品情報の取得
+# ✅ 商品情報の取得
 product = st.session_state.get("selected_product")
 if not product:
     st.warning("商品情報が見つかりませんでした。")
-    st.switch_page("pages/2_商品検索.py")
+    st.page_link("pages/2_商品検索.py")
     st.stop()
 
-# OAuth認証
+# ✅ OAuth認証
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
@@ -44,7 +44,7 @@ except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
 
-# 商品表示
+# ✅ 商品表示
 image_url = product.get("画像URL", "")
 if image_url:
     try:
@@ -67,7 +67,7 @@ st.caption(f"ステータス: {product.get('ステータス', '不明')}")
 st.divider()
 st.subheader("本当に購入しますか？")
 
-# 購入処理
+# ✅ 購入処理
 if st.button("購入する"):
     try:
         product_id = product.get("商品ID")
@@ -82,31 +82,35 @@ if st.button("購入する"):
         current_buyer_id = str(current_row.get("購入者", "")).strip()
         current_user_id = str(st.session_state.get("id", "")).strip()
 
-        # ✅ 許可条件：出品中 or 自分が購入者
         if current_status == "出品中":
             jst = pytz.timezone("Asia/Tokyo")
             now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
 
-            sheet.update_cell(row_index + 2, 10, current_user_id)                     # J列: 購入者
-            sheet.update_cell(row_index + 2, 11, st.session_state.get("username", "")) # K列: 購入者名
-            sheet.update_cell(row_index + 2, 12, now)                                  # L列: 購入日時
-            sheet.update_cell(row_index + 2, 13, "購入手続き中")                        # M列: ステータス
-
-            st.success("購入手続きに進みます")
-            st.switch_page("pages/5_支払い画面.py")
+            try:
+                sheet.update_cell(row_index + 2, 10, current_user_id)                     # J列: 購入者
+                sheet.update_cell(row_index + 2, 11, st.session_state.get("username", "")) # K列: 購入者名
+                sheet.update_cell(row_index + 2, 12, now)                                  # L列: 購入日時
+                sheet.update_cell(row_index + 2, 13, "購入手続き中")                        # M列: ステータス
+                time.sleep(1)
+                st.success("購入手続きに進みます")
+                st.page_link("pages/5_支払い画面.py")
+            except Exception as e:
+                st.error("購入処理中にエラーが発生しました。もう一度お試しください。")
 
         elif current_buyer_id == current_user_id:
             st.success("購入済みの商品です。支払い画面に進みます")
-            st.switch_page("pages/5_支払い画面.py")
+            st.page_link("pages/5_支払い画面.py")
 
         else:
-            st.error("ほかの方がすでに購入されたか、商品が取下げられた可能性があります。商品検索画面にお戻りください。")
+            st.error("ほかの方がすでに購入されたか、商品が取下げられた可能性があります。")
+            st.page_link("pages/2_商品検索.py")
             st.stop()
 
     except Exception as e:
-        st.error("ほかの方がすでに購入されたか、商品が取下げられた可能性があります。商品検索画面にお戻りください。")
+        st.error("購入処理中にエラーが発生しました。")
+        st.page_link("pages/2_商品検索.py")
 
-# キャンセル処理
+# ✅ キャンセル処理
 if st.button("キャンセルする"):
     try:
         product_id = product.get("商品ID")
@@ -118,13 +122,13 @@ if st.button("キャンセルする"):
 
         current_status = all_data[row_index].get("ステータス", "")
         if current_status in ["出品中", "取下げ"]:
-            st.switch_page("pages/2_商品検索.py")
+            st.page_link("pages/2_商品検索.py")
         else:
-            st.warning("すでに商品が購入された等の状態です。自身が購入しキャンセルしたい場合は、照会先に連絡ください。そのほかの方は下メニューから商品検索画面にお戻りください。")
+            st.warning("すでに商品が購入された等の状態です。照会先に連絡してください。")
     except Exception as e:
         st.error("キャンセル処理中にエラーが発生しました。")
 
-# フッターメニュー
+# ✅ フッターメニュー
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
