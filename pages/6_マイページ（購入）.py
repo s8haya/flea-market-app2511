@@ -73,11 +73,11 @@ if purchased_items:
 else:
     st.info("購入履歴がありません。")
 
-# ✅ フッターメニュー（リンク専用）
+# ✅ フッターメニュー（共通4画面）
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
-    st.page_link("app.py", label="ログイン画面")
     st.page_link("pages/2_商品検索.py", label="商品検索")
     st.page_link("pages/3_出品画面.py", label="出品画面")
     st.page_link("pages/7_マイページ（出品）.py", label="マイページ（出品）")
+    st.page_link("pages/6_マイページ（購入）.py", label="マイページ（購入）")
