@@ -7,19 +7,31 @@ from google.oauth2.credentials import Credentials
 st.set_page_config(page_title="ログイン画面", layout="centered")
 st.title("ログイン画面")
 
-# OAuth認証
+# ✅ OAuth認証（分離＋例外処理）
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
     gc = gspread.authorize(creds)
-    sheet = gc.open(st.secrets["USER_SHEET_NAME"]).sheet1
-    records = sheet.get_all_records()
-    df = pd.DataFrame(records, dtype=str)
 except Exception as e:
-    st.error(f"Google Sheetsからユーザー情報の取得に失敗しました: {e}")
+    st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
 
-# ユーザー辞書
+# ✅ ユーザー情報取得（キャッシュ化）
+@st.cache_data(ttl=30)
+def load_user_data():
+    try:
+        sheet = gc.open(st.secrets["USER_SHEET_NAME"]).sheet1
+        records = sheet.get_all_records()
+        return pd.DataFrame(records, dtype=str)
+    except Exception as e:
+        st.error(f"ユーザー情報の取得に失敗しました: {e}")
+        return pd.DataFrame()
+
+df = load_user_data()
+if df.empty:
+    st.stop()
+
+# ✅ ユーザー辞書構築
 user_dict = {
     row["id"].strip(): {
         "password": row["password"].strip(),
@@ -28,7 +40,7 @@ user_dict = {
     for _, row in df.iterrows()
 }
 
-# ヘッダー：Flexbox風レイアウト
+# ✅ ログイン状態の分岐
 if "logged_in" in st.session_state and st.session_state["logged_in"]:
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
@@ -41,7 +53,6 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
     st.subheader("下のメニューから画面を選択してください。")
 
 else:
-    # ログインフォーム（未ログイン時のみ表示）
     with st.container():
         input_id = st.text_input("ユーザーID").strip()
         input_pass = st.text_input("パスワード", type="password").strip()
@@ -61,7 +72,7 @@ else:
         else:
             st.error("ユーザーIDが存在しません")
 
-# フッターメニュー：Flexbox風レイアウト
+# ✅ フッターメニュー
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
