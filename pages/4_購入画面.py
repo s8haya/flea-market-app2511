@@ -61,7 +61,11 @@ else:
 st.markdown(f"### {product.get('商品名', '不明')}")
 st.write(f"価格: {product.get('価格', '不明')}円")
 st.write(f"カテゴリ: {product.get('カテゴリ', '不明')}")
-st.write(product.get("説明", ""))
+
+# ✅ 商品説明（改行1回でも反映）
+desc_text = product.get("説明", "")
+st.markdown(desc_text.replace("\n", "<br>"), unsafe_allow_html=True)
+
 st.caption(f"出品者: {product.get('出品者名', '不明')} / 投稿日: {product.get('投稿日時', '不明')}")
 st.caption(f"ステータス: {product.get('ステータス', '不明')}")
 
