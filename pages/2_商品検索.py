@@ -1,21 +1,32 @@
-# ✅ ページ切り替えUI（共通関数）
-def render_pagination_controls():
+# ✅ ページネーション設定
+ITEMS_PER_PAGE = 6
+total_pages = (len(filtered) - 1) // ITEMS_PER_PAGE + 1
+if "page" not in st.session_state:
+    st.session_state["page"] = 1
+
+# ✅ ページ切り替えUI（共通関数）※呼び出しより前に定義
+def render_pagination_controls(position: str):
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
         if st.session_state["page"] > 1:
-            if st.button("← 前へ", key=f"prev_{st.session_state['page']}"):
+            if st.button("← 前へ", key=f"{position}_prev_{st.session_state['page']}"):
                 st.session_state["page"] -= 1
                 st.rerun()
     with col3:
         if st.session_state["page"] < total_pages:
-            if st.button("次へ →", key=f"next_{st.session_state['page']}"):
+            if st.button("次へ →", key=f"{position}_next_{st.session_state['page']}"):
                 st.session_state["page"] += 1
                 st.rerun()
     with col2:
         st.markdown(f"ページ {st.session_state['page']} / {total_pages}", unsafe_allow_html=True)
 
 # ✅ 上部ページ切り替えUI
-render_pagination_controls()
+render_pagination_controls("top")
+
+# ✅ 表示対象アイテム抽出
+start_idx = (st.session_state["page"] - 1) * ITEMS_PER_PAGE
+end_idx = start_idx + ITEMS_PER_PAGE
+page_items = filtered[start_idx:end_idx]
 
 # ✅ 商品表示（カード風グリッド）
 if page_items:
@@ -56,13 +67,4 @@ else:
     st.warning("該当する商品が見つかりませんでした。")
 
 # ✅ 下部ページ切り替えUI（複製）
-render_pagination_controls()
-
-# ✅ フッターメニュー（共通4画面）
-st.divider()
-st.markdown("### 📌 メニュー")
-with st.container(horizontal=True):
-    st.page_link("pages/2_商品検索.py", label="商品検索")
-    st.page_link("pages/3_出品画面.py", label="出品画面")
-    st.page_link("pages/7_マイページ（出品）.py", label="マイページ（出品）")
-    st.page_link("pages/6_マイページ（購入）.py", label="マイページ（購入）")
+render_pagination_controls("bottom")
