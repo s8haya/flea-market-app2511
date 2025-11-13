@@ -52,7 +52,7 @@ data = load_product_data()
 if not data:
     st.stop()
 
-# ✅ 検索・絞り込みUI（幅統一）
+# ✅ 検索・絞り込みUI
 with st.container():
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -68,7 +68,23 @@ with st.container():
     with col5:
         sort_option = st.radio("並び順", ["新着順", "価格が安い順", "価格が高い順"], horizontal=True)
     with col6:
-        st.empty()  # レイアウト調整用
+        st.empty()
+
+# ✅ ページリセット用：フィルター変更検知
+if "prev_filters" not in st.session_state:
+    st.session_state["prev_filters"] = {}
+
+current_filters = {
+    "search": search,
+    "category": category_filter,
+    "seller": seller_filter,
+    "status": status_filter,
+    "sort": sort_option
+}
+
+if st.session_state["prev_filters"] != current_filters:
+    st.session_state["page"] = 1
+    st.session_state["prev_filters"] = current_filters
 
 # ✅ 絞り込み処理
 filtered = data
