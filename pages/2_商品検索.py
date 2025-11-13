@@ -64,7 +64,7 @@ with st.container():
 
     col4, col5, col6 = st.columns(3)
     with col4:
-        status_filter = st.selectbox("📌 出品ステータス", ["すべて", "出品中のみ", "売却済"])
+        status_filter = st.selectbox("📌 出品ステータス", ["すべて", "出品中のみ", "売却済"], index=1)
     with col5:
         sort_option = st.radio("並び順", ["新着順", "価格が安い順", "価格が高い順"], horizontal=True)
     with col6:
