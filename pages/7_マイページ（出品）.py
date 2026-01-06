@@ -105,6 +105,19 @@ st.markdown("""
     background-color: #666;
 }
 
+.restore-button {
+    background-color: #2ECC71;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+}
+.restore-button:hover {
+    background-color: #27AE60;
+}
+
 .edit-button {
     background-color: #4A90E2;
     color: white;
@@ -184,22 +197,43 @@ if my_items:
         st.caption(f"投稿日時: {item.get('投稿日時', '不明')}")
         st.caption(f"ステータス: {item.get('ステータス', '不明')}")
 
-        # ボタン（修正 → 取下げ）
+        # ボタン（修正 → 出品状態変更）
         colA, colB = st.columns(2)
 
+        # 修正ボタン
         with colA:
             if st.button("修正", key=f"edit_{product_id}"):
                 st.session_state["edit_product"] = item
                 st.switch_page("pages/3_出品画面.py")
                 st.stop()
 
+        # 出品状態変更ボタン
         with colB:
-            if st.button("取下げ", key=f"withdraw_{product_id}"):
-                row_index = next((i for i, row in enumerate(raw_data) if row.get("商品ID") == product_id), None)
-                if row_index is not None:
-                    sheet.update_cell(row_index + 2, 16, "取下げ")
-                    st.success("商品を取下げました")
-                    st.rerun()
+            status = item.get("ステータス", "")
+
+            # 出品中 → 取下げ
+            if status == "出品中":
+                if st.button("取下げ", key=f"withdraw_{product_id}"):
+                    row_index = next((i for i, row in enumerate(raw_data)
+                                      if row.get("商品ID") == product_id), None)
+                    if row_index is not None:
+                        sheet.update_cell(row_index + 2, 16, "取下げ")
+                        st.success("商品を取下げました")
+                        st.rerun()
+
+            # 取下げ → 出品中に戻す
+            elif status == "取下げ":
+                if st.button("出品に戻す", key=f"restore_{product_id}"):
+                    row_index = next((i for i, row in enumerate(raw_data)
+                                      if row.get("商品ID") == product_id), None)
+                    if row_index is not None:
+                        sheet.update_cell(row_index + 2, 16, "出品中")
+                        st.success("商品を再出品しました")
+                        st.rerun()
+
+            # 購入手続き中 / 支払い確認中
+            else:
+                st.caption("※ この商品は現在操作できません")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
