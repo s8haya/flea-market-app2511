@@ -45,7 +45,7 @@ try:
     user_id = str(st.session_state.get("id", "")).strip()
     my_items = [
         row for row in raw_data
-        if str(row.get("出品者ID", "")).strip() == user_id
+        if str(row.get("出品者", "")).strip() == user_id
     ]
 except Exception as e:
     st.error(f"出品履歴の取得に失敗しました: {e}")

@@ -165,9 +165,9 @@ if submit:
         update_row = [
             edit_item["商品ID"], name, price, desc, condition,
             main_url, sub1_url, sub2_url,
-            edit_item["出品者ID"], edit_item["出品者名"],
+            edit_item["出品者"], edit_item["出品者名"],
             edit_item["投稿日時"], category,
-            edit_item.get("購入者ID", ""), edit_item.get("購入者名", ""),
+            edit_item.get("購入者", ""), edit_item.get("購入者名", ""),
             edit_item.get("購入日時", ""), edit_item["ステータス"]
         ]
 
