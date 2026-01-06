@@ -47,7 +47,7 @@ def load_product_data():
             row for row in raw_data
             if row.get("商品名")
             and row.get("価格")
-            and row.get("画像URL")   # メイン画像URLがあるものだけ
+            and row.get("画像URL")
             and row.get("ステータス") != "取下げ"
         ]
     except Exception as e:
@@ -59,10 +59,18 @@ if not data:
     st.stop()
 
 # ============================================
-# 🎨 画像表示用 CSS（固定枠で高さを揃える）
+# 🎨 CSS（カード枠＋ギャラリー固定枠＋リッチボタン）
 # ============================================
 st.markdown("""
 <style>
+.product-card {
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 20px;
+    background-color: #fafafa;
+}
+
 .image-box {
     width: 200px;
     height: 200px;
@@ -70,24 +78,39 @@ st.markdown("""
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 .image-box img {
     width: 100%;
     height: 100%;
     object-fit: contain;
 }
+
 .thumb-box {
     width: 50px;
     height: 50px;
     overflow: hidden;
     border: 1px solid #ccc;
-    margin-top: 2px;
+    margin-top: 4px;
 }
 .thumb-box img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.buy-button {
+    background-color: #ff6b6b;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: none;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.buy-button:hover {
+    background-color: #ff4b4b;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -156,16 +179,10 @@ if search:
     ]
 
 if category_filter != "すべて":
-    filtered = [
-        item for item in filtered
-        if item.get("カテゴリ") == category_filter
-    ]
+    filtered = [item for item in filtered if item.get("カテゴリ") == category_filter]
 
 if condition_filter != "すべて":
-    filtered = [
-        item for item in filtered
-        if item.get("状態") == condition_filter
-    ]
+    filtered = [item for item in filtered if item.get("状態") == condition_filter]
 
 if status_filter == "出品中のみ":
     filtered = [item for item in filtered if item.get("ステータス") == "出品中"]
@@ -232,71 +249,70 @@ if page_items:
 
         for col, item in zip(cols, row_items):
             with col:
-                with st.container():
+                st.markdown('<div class="product-card">', unsafe_allow_html=True)
 
-                    product_id = item.get("商品ID", f"noid_{row_index}")
+                product_id = item.get("商品ID", f"noid_{row_index}")
 
-                    main_url = item.get("画像URL", "")
-                    sub1_url = item.get("画像URLサブ1", "")
-                    sub2_url = item.get("画像URLサブ2", "")
+                main_url = item.get("画像URL", "")
+                sub1_url = item.get("画像URLサブ1", "")
+                sub2_url = item.get("画像URLサブ2", "")
 
-                    # 利用可能な画像一覧（空でないものだけ）
-                    image_candidates = [url for url in [main_url, sub1_url, sub2_url] if url]
+                image_candidates = [url for url in [main_url, sub1_url, sub2_url] if url]
 
-                    # 表示用の初期画像を決定
-                    if f"thumb_{product_id}" not in st.session_state:
-                        st.session_state[f"thumb_{product_id}"] = image_candidates[0] if image_candidates else ""
+                if f"thumb_{product_id}" not in st.session_state:
+                    st.session_state[f"thumb_{product_id}"] = image_candidates[0] if image_candidates else ""
 
-                    current_img = st.session_state.get(f"thumb_{product_id}", "")
+                current_img = st.session_state.get(f"thumb_{product_id}", "")
 
-                    # メイン画像（固定サイズ枠で高さを揃える）
-                    if current_img:
+                # メイン画像（固定枠）
+                if current_img:
+                    st.markdown(
+                        f"""
+                        <div class="image-box">
+                            <img src="{current_img}" />
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.write("画像なし")
+
+                # サムネイル
+                thumb_urls = [main_url, sub1_url, sub2_url]
+                thumb_cols = st.columns(len(thumb_urls))
+
+                for idx, (thumb_col, url) in enumerate(zip(thumb_cols, thumb_urls)):
+                    if not url:
+                        continue
+                    with thumb_col:
                         st.markdown(
                             f"""
-                            <div class="image-box">
-                                <img src="{current_img}" />
+                            <div class="thumb-box">
+                                <img src="{url}" />
                             </div>
                             """,
                             unsafe_allow_html=True
                         )
-                    else:
-                        st.write("画像なし")
+                        if st.button(f"{idx+1}", key=f"thumbbtn_{product_id}_{idx}"):
+                            st.session_state[f"thumb_{product_id}"] = url
 
-                    # サムネイル切替（固定サイズの小枠）
-                    thumb_urls = [main_url, sub1_url, sub2_url]
-                    thumb_cols = st.columns(len(thumb_urls))
+                # 商品情報
+                st.markdown(f"**{item.get('商品名', '不明')}**")
+                st.markdown(f"**{item.get('価格', '不明')}円**")
+                st.caption(f"カテゴリ: {item.get('カテゴリ', '不明')}")
+                st.caption(f"状態: {item.get('状態', '不明')}")
+                st.caption(f"出品日時: {item.get('投稿日時', '不明')}")
+                st.caption(f"ステータス: {item.get('ステータス', '不明')}")
 
-                    for idx, (thumb_col, url) in enumerate(zip(thumb_cols, thumb_urls)):
-                        if not url:
-                            continue
-                        with thumb_col:
-                            # 画像を表示する枠
-                            st.markdown(
-                                f"""
-                                <div class="thumb-box">
-                                    <img src="{url}" />
-                                </div>
-                                """,
-                                unsafe_allow_html=True
-                            )
-                            # クリックでメイン画像を切替
-                            if st.button(f"{idx+1}", key=f"thumbbtn_{product_id}_{idx}"):
-                                st.session_state[f"thumb_{product_id}"] = url
+                # 購入ボタン（リッチデザイン）
+                if item.get("ステータス") == "出品中":
+                    if st.button("購入する", key=f"buy_{product_id}_{row_index}"):
+                        st.session_state["selected_product"] = item
+                        st.switch_page("pages/4_購入画面.py")
+                        st.stop()
 
-                    # 商品情報
-                    st.markdown(f"**{item.get('商品名', '不明')}**")
-                    st.markdown(f"**{item.get('価格', '不明')}円**")
-                    st.caption(f"カテゴリ: {item.get('カテゴリ', '不明')}")
-                    st.caption(f"状態: {item.get('状態', '不明')}")
-                    st.caption(f"出品日時: {item.get('投稿日時', '不明')}")
-                    st.caption(f"ステータス: {item.get('ステータス', '不明')}")
+                st.markdown('</div>', unsafe_allow_html=True)
 
-                    # 購入ボタン
-                    if item.get("ステータス") == "出品中":
-                        if st.button("購入する", key=f"buy_{product_id}_{row_index}"):
-                            st.session_state["selected_product"] = item
-                            st.switch_page("pages/4_購入画面.py")
-                            st.stop()
 else:
     st.warning("該当する商品が見つかりませんでした。")
 
