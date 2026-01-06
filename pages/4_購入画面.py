@@ -94,11 +94,24 @@ st.markdown("""
     height: 100%;
     object-fit: cover;
 }
+.buy-button {
+    background-color: #ff6b6b;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.buy-button:hover {
+    background-color: #ff4b4b;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================
-# 🖼️ ギャラリー表示
+# 🖼️ ギャラリー表示（メイン＋サムネイル）
 # ============================================
 main_url = product.get("画像URL", "")
 sub1_url = product.get("画像URLサブ1", "")
@@ -160,24 +173,21 @@ st.divider()
 st.subheader("本当に購入しますか？")
 
 # ============================================
-# 🛒 購入処理
+# 🛒 購入処理（ステータスによって分岐）
 # ============================================
-if st.button("購入する", key="buy_main"):
-    try:
-        product_id = product.get("商品ID")
-        all_data = sheet.get_all_records()
-        row_index = next((i for i, row in enumerate(all_data) if row.get("商品ID") == product_id), None)
+status = product.get("ステータス", "")
+buyer_id = str(product.get("購入者", "")).strip()
+current_user_id = str(st.session_state.get("id", "")).strip()
 
-        if row_index is None:
-            st.error("商品が見つかりませんでした。")
-            st.stop()
+if status == "出品中":
 
-        current_row = all_data[row_index]
-        current_status = current_row.get("ステータス", "")
-        current_buyer_id = str(current_row.get("購入者", "")).strip()
-        current_user_id = str(st.session_state.get("id", "")).strip()
+    if st.button("購入する", key="buy_main"):
+        try:
+            row_index = next((i for i, row in enumerate(all_data) if row.get("商品ID") == product_id), None)
+            if row_index is None:
+                st.error("商品が見つかりませんでした。")
+                st.stop()
 
-        if current_status == "出品中":
             jst = pytz.timezone("Asia/Tokyo")
             now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -191,27 +201,22 @@ if st.button("購入する", key="buy_main"):
             st.switch_page("pages/5_支払い画面.py")
             st.stop()
 
-        elif current_buyer_id == current_user_id:
-            st.success("購入済みの商品です。支払い画面に進みます")
-            st.switch_page("pages/5_支払い画面.py")
-            st.stop()
-
-        else:
-            st.error("ほかの方がすでに購入された可能性があります。")
+        except Exception:
+            st.error("購入処理中にエラーが発生しました。")
             st.switch_page("pages/2_商品検索.py")
             st.stop()
 
-    except Exception:
-        st.error("購入処理中にエラーが発生しました。")
+    if st.button("キャンセルする"):
         st.switch_page("pages/2_商品検索.py")
         st.stop()
 
-# ============================================
-# ❌ キャンセル
-# ============================================
-if st.button("キャンセルする"):
-    st.switch_page("pages/2_商品検索.py")
+elif buyer_id == current_user_id:
+    st.success("購入済みの商品です。支払い画面に進みます")
+    st.switch_page("pages/5_支払い画面.py")
     st.stop()
+
+else:
+    st.error("すでに購入済みか、取下げられた商品です。")
 
 # ============================================
 # 📌 フッターメニュー
