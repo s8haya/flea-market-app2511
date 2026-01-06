@@ -65,48 +65,75 @@ price = st.number_input("価格", min_value=0)
 category = st.selectbox("カテゴリ", ["衣類", "雑貨", "日用品", "本", "スポーツ", "その他"])
 condition = st.selectbox("状態", ["新品", "中古"])
 desc = st.text_area("説明")
-image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png"])
+
+image_main = st.file_uploader("商品画像（メイン）", type=["jpg", "jpeg", "png"])
+image_sub1 = st.file_uploader("商品画像（サブ1）", type=["jpg", "jpeg", "png"])
+image_sub2 = st.file_uploader("商品画像（サブ2）", type=["jpg", "jpeg", "png"])
+
 submit = st.button("出品する")
 
 # ✅ 投稿処理
 if submit:
-    if not name or not price or not desc or not image_file:
-        st.warning("商品名・価格・説明・画像はすべて必須です。")
+    if not name or not price or not desc or not image_main:
+        st.warning("商品名・価格・説明・メイン画像はすべて必須です。")
         st.stop()
 
-    try:
-        img = Image.open(image_file)
-        img = ImageOps.exif_transpose(img)
-    except UnidentifiedImageError:
-        st.error("画像の読み込みに失敗しました。jpg/png形式で再アップロードしてください。")
+    def process_image(file):
+        try:
+            img = Image.open(file)
+            img = ImageOps.exif_transpose(img)
+        except UnidentifiedImageError:
+            return None
+
+        max_width = 512
+        if img.width > max_width:
+            ratio = max_width / img.width
+            new_size = (max_width, int(img.height * ratio))
+            img = img.resize(new_size)
+
+        img_buffer = io.BytesIO()
+        img.save(img_buffer, format="PNG")
+        img_buffer.seek(0)
+        return img_buffer
+
+    def upload_to_cloudinary(buffer):
+        try:
+            result = cloudinary.uploader.upload(buffer, folder="products")
+            return result["secure_url"]
+        except Exception:
+            return ""
+
+    # ✅ メイン画像アップロード
+    main_buffer = process_image(image_main)
+    if not main_buffer:
+        st.error("メイン画像の読み込みに失敗しました。jpg/png形式で再アップロードしてください。")
         st.stop()
 
-    max_width = 512
-    if img.width > max_width:
-        ratio = max_width / img.width
-        new_size = (max_width, int(img.height * ratio))
-        img = img.resize(new_size)
+    image_url_main = upload_to_cloudinary(main_buffer)
 
-    img_buffer = io.BytesIO()
-    img.save(img_buffer, format="PNG")
-    img_buffer.seek(0)
+    # ✅ サブ画像アップロード（任意）
+    image_url_sub1 = ""
+    image_url_sub2 = ""
 
-    # ✅ Cloudinaryにアップロード
-    try:
-        result = cloudinary.uploader.upload(img_buffer, folder="products")
-        image_url = result["secure_url"]
-    except Exception as e:
-        st.error(f"Cloudinaryへの画像アップロードに失敗しました: {e}")
-        st.stop()
+    if image_sub1:
+        sub1_buffer = process_image(image_sub1)
+        if sub1_buffer:
+            image_url_sub1 = upload_to_cloudinary(sub1_buffer)
 
-    # ✅ 商品情報の登録（状態列を追加）
+    if image_sub2:
+        sub2_buffer = process_image(image_sub2)
+        if sub2_buffer:
+            image_url_sub2 = upload_to_cloudinary(sub2_buffer)
+
+    # ✅ 商品情報の登録
     product_id = str(uuid.uuid4())
     jst = pytz.timezone("Asia/Tokyo")
     now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
     status = "出品中"
 
     new_row = [
-        product_id, name, price, desc, condition, image_url,
+        product_id, name, price, desc, condition,
+        image_url_main, image_url_sub1, image_url_sub2,
         user_id, username, now, category,
         "", "", "", status
     ]
