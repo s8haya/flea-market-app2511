@@ -3,7 +3,6 @@ import gspread
 import json
 from google.oauth2.credentials import Credentials
 from datetime import datetime
-import time
 
 st.set_page_config(page_title="マイページ（出品）", layout="centered")
 st.title("マイページ（出品）")
@@ -39,90 +38,170 @@ except Exception as e:
     st.stop()
 
 # ============================================
-# 📄 出品データ取得
+# 📄 出品履歴取得
 # ============================================
 try:
     raw_data = sheet.get_all_records()
     user_id = str(st.session_state.get("id", "")).strip()
-    listed_items = [
+    my_items = [
         row for row in raw_data
-        if str(row.get("出品者", "")).strip() == user_id
+        if str(row.get("出品者ID", "")).strip() == user_id
     ]
 except Exception as e:
     st.error(f"出品履歴の取得に失敗しました: {e}")
     st.stop()
 
 # ============================================
-# 🕒 投稿日時で新しい順にソート
+# 🎨 CSS（カード枠＋ギャラリー固定枠）
 # ============================================
-def parse_dt(dt):
-    try:
-        return datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
-    except:
-        return datetime.min
+st.markdown("""
+<style>
+.product-card {
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 20px;
+    background-color: #fafafa;
+}
 
-listed_items.sort(key=lambda x: parse_dt(x.get("投稿日時", "")), reverse=True)
+.image-box {
+    width: 240px;
+    height: 240px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.image-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.thumb-box {
+    width: 60px;
+    height: 60px;
+    overflow: hidden;
+    border: 1px solid #ccc;
+    margin-top: 4px;
+}
+.thumb-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.withdraw-button {
+    background-color: #888;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+}
+.withdraw-button:hover {
+    background-color: #666;
+}
+
+.edit-button {
+    background-color: #4A90E2;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+}
+.edit-button:hover {
+    background-color: #357ABD;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ============================================
-# 🖼️ 商品表示（Cloudinary対応）
+# 🖼️ 商品表示（ギャラリー＋カード枠）
 # ============================================
-if listed_items:
-    st.subheader("出品した商品一覧")
+if my_items:
+    st.subheader("あなたの出品一覧")
 
-    for item in listed_items:
-        with st.container(border=True):
+    for item in my_items:
+        product_id = item.get("商品ID", "noid")
 
-            # Cloudinary画像を高速表示
-            image_url = item.get("画像URL", "")
-            if image_url:
-                st.image(image_url, width=160)
-            else:
-                st.write("画像なし")
+        main_url = item.get("画像URL", "")
+        sub1_url = item.get("画像URLサブ1", "")
+        sub2_url = item.get("画像URLサブ2", "")
 
-            # 商品情報
-            st.markdown(f"**{item.get('商品名', '不明')}**")
-            st.caption(f"{item.get('価格', '不明')}円 / {item.get('カテゴリ', '不明')}")
-            st.caption(f"投稿日: {item.get('投稿日時', '不明')} / ステータス: {item.get('ステータス', '不明')}")
+        image_candidates = [url for url in [main_url, sub1_url, sub2_url] if url]
 
-            status = item.get("ステータス", "")
-            product_id = str(item.get("商品ID", "")).strip()
+        # 初期表示
+        if f"mypage_sell_gallery_{product_id}" not in st.session_state:
+            st.session_state[f"mypage_sell_gallery_{product_id}"] = image_candidates[0] if image_candidates else ""
 
-            # ============================================
-            # 🗑️ 出品中 → 取下げボタン
-            # ============================================
-            if status == "出品中":
-                if st.button("出品を取下げる", key=f"withdraw_{product_id}"):
-                    try:
-                        all_data = sheet.get_all_records()
-                        row_index = next(
-                            (i for i, row in enumerate(all_data)
-                             if str(row.get("商品ID", "")).strip() == product_id),
-                            None
-                        )
+        current_img = st.session_state[f"mypage_sell_gallery_{product_id}"]
 
-                        if row_index is not None:
-                            sheet.update_cell(row_index + 2, 13, "取下げ")  # M列: ステータス
-                            time.sleep(1)
-                            st.success("出品を取下げました。")
-                            st.rerun()
-                        else:
-                            st.error("商品が見つかりませんでした。")
+        # カード開始
+        st.markdown('<div class="product-card">', unsafe_allow_html=True)
 
-                    except Exception as e:
-                        st.error(f"ステータス更新に失敗しました: {e}")
+        # メイン画像
+        if current_img:
+            st.markdown(
+                f"""
+                <div class="image-box">
+                    <img src="{current_img}" />
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+            st.write("画像なし")
 
-            # ============================================
-            # 🛒 購入状況に応じた表示
-            # ============================================
-            if status in ["購入手続き中", "支払い確認中", "支払い確認済"]:
-                purchaser = item.get("購入者名", "不明")
-                purchase_time = item.get("購入日時", "不明")
-                st.info(f"🛒 購入者: {purchaser} / 購入日時: {purchase_time}")
+        # サムネイル
+        thumb_cols = st.columns(3)
+        thumb_urls = [main_url, sub1_url, sub2_url]
 
-                if status == "購入手続き中":
-                    st.warning("⚠️ 支払い処理が完了するまで、物品のお渡しはお待ちください。")
-                else:
-                    st.success("✅ 購入者と個別でやり取りのうえ、物品をお渡しください。")
+        for idx, (col, url) in enumerate(zip(thumb_cols, thumb_urls)):
+            if not url:
+                continue
+            with col:
+                st.markdown(
+                    f"""
+                    <div class="thumb-box">
+                        <img src="{url}" />
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                if st.button(f"{idx+1}", key=f"mypage_sell_thumb_{product_id}_{idx}"):
+                    st.session_state[f"mypage_sell_gallery_{product_id}"] = url
+
+        # 商品情報
+        st.markdown(f"**{item.get('商品名', '不明')}**")
+        st.markdown(f"**{item.get('価格', '不明')}円**")
+        st.caption(f"カテゴリ: {item.get('カテゴリ', '不明')}")
+        st.caption(f"状態: {item.get('状態', '不明')}")
+        st.caption(f"投稿日時: {item.get('投稿日時', '不明')}")
+        st.caption(f"ステータス: {item.get('ステータス', '不明')}")
+
+        # ボタン（修正 → 取下げ）
+        colA, colB = st.columns(2)
+
+        with colA:
+            if st.button("修正", key=f"edit_{product_id}"):
+                st.session_state["edit_product"] = item
+                st.switch_page("pages/3_出品画面.py")
+                st.stop()
+
+        with colB:
+            if st.button("取下げ", key=f"withdraw_{product_id}"):
+                row_index = next((i for i, row in enumerate(raw_data) if row.get("商品ID") == product_id), None)
+                if row_index is not None:
+                    sheet.update_cell(row_index + 2, 16, "取下げ")
+                    st.success("商品を取下げました")
+                    st.rerun()
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
 else:
     st.info("出品履歴がありません。")
