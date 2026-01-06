@@ -104,22 +104,21 @@ except Exception:
 # ---------------------------------------------------------
 # 現金払い案内
 # ---------------------------------------------------------
-st.caption("現金払いを希望の方は直接「ITデジ戦 鈴木（啓）・工藤・木屋」まで連絡ください。")
+st.caption("現金払いをご希望の方は、下記自動メール配信ボタンを押下し、「ITデジ戦 鈴木（啓）・工藤・木屋」までご連絡ください。")
 
 # ---------------------------------------------------------
 # 現金払い依頼メール（確認ステップ付き）
 # ---------------------------------------------------------
-st.subheader("現金払いの事務局連絡")
 
 if "confirm_cash_mail" not in st.session_state:
     st.session_state["confirm_cash_mail"] = False
 
 if not st.session_state["confirm_cash_mail"]:
-    if st.button("事務局宛のシステム依頼メール（自動配信）"):
+    if st.button("事務局宛の現金払い依頼メール（自動配信）"):
         st.session_state["confirm_cash_mail"] = True
         st.rerun()
 else:
-    st.warning("現金払い依頼メールを事務局に送信しますか？（出品者には送信されません）")
+    st.warning("現金払い依頼メールを事務局に送信しますか？")
 
     col1, col2 = st.columns(2)
 
@@ -127,20 +126,28 @@ else:
         if st.button("送信する"):
             try:
                 user_df = pd.DataFrame(user_sheet.get_all_records(), dtype=str)
-                buyer_id = str(product.get("購入者", "")).strip()
 
-                buyer_email = user_df.query("id == @buyer_id")["mail"].values[0]
-                buyer_dept = user_df.query("id == @buyer_id")["department"].values[0]
-                buyer_name = st.session_state["username"]
+                # ✅ 修正：ログイン中ユーザーのIDを使用
+                buyer_id = str(st.session_state.get("id", "")).strip()
+                if not buyer_id:
+                    st.error("ログインユーザーのIDが取得できませんでした。再ログインしてください。")
+                else:
+                    hit = user_df.query("id == @buyer_id")
+                    if hit.empty:
+                        st.error(f"ユーザーID {buyer_id} に該当するユーザー情報が見つかりませんでした。")
+                    else:
+                        buyer_email = hit["mail"].values[0]
+                        buyer_dept = hit["department"].values[0]
+                        buyer_name = st.session_state["username"]
 
-                product_name = product.get("商品名", "")
-                price = product.get("価格", "")
-                category = product.get("カテゴリ", "")
-                purchase_time = datetime.now(pytz.timezone("Asia/Tokyo")).strftime("%Y-%m-%d %H:%M:%S")
+                        product_name = product.get("商品名", "")
+                        price = product.get("価格", "")
+                        category = product.get("カテゴリ", "")
+                        purchase_time = datetime.now(pytz.timezone("Asia/Tokyo")).strftime("%Y-%m-%d %H:%M:%S")
 
-                subject = f"【現金払い依頼】{buyer_dept} {buyer_name}さんが「{product_name}」の現金払いを希望しています"
+                        subject = f"【現金払い依頼】{buyer_dept} {buyer_name}さんが「{product_name}」の現金払いを希望しています"
 
-                body = f"""
+                        body = f"""
 事務局各位
 
 以下の商品について、購入者より現金払いの希望がありました。
@@ -155,18 +162,18 @@ else:
 このメールはシステムからの自動配信です。
 """
 
-                send_mail(
-                    [buyer_email],
-                    subject,
-                    body,
-                    cc_list=[
-                        "ke7-suzuki@meijiyasuda.co.jp",
-                        "ji-kudou@meijiyasuda.co.jp",
-                        "ha-kiya@meijiyasuda.co.jp"
-                    ]
-                )
+                        send_mail(
+                            [buyer_email],
+                            subject,
+                            body,
+                            cc_list=[
+                                "ke7-suzuki@meijiyasuda.co.jp",
+                                "ji-kudou@meijiyasuda.co.jp",
+                                "ha-kiya@meijiyasuda.co.jp"
+                            ]
+                        )
 
-                st.success("事務局宛に現金払い依頼メールを送信しました。対応をお待ちください。")
+                        st.success("事務局宛に現金払い依頼メールを送信しました。対応をお待ちください。")
 
             except Exception as e:
                 st.error(f"現金払い依頼メールの送信に失敗しました: {e}")
