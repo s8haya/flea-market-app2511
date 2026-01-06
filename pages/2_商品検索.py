@@ -45,7 +45,10 @@ def load_product_data():
         raw_data = sheet.get_all_records()
         return [
             row for row in raw_data
-            if row.get("商品名") and row.get("価格") and row.get("画像URL") and row.get("ステータス") != "取下げ"
+            if row.get("商品名")
+            and row.get("価格")
+            and row.get("画像URL")   # メイン画像URLがあるものだけ
+            and row.get("ステータス") != "取下げ"
         ]
     except Exception as e:
         st.error(f"商品データの取得に失敗しました: {e}")
@@ -54,6 +57,40 @@ def load_product_data():
 data = load_product_data()
 if not data:
     st.stop()
+
+# ============================================
+# 🎨 画像表示用 CSS（固定枠で高さを揃える）
+# ============================================
+st.markdown("""
+<style>
+.image-box {
+    width: 200px;
+    height: 200px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 4px;
+}
+.image-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.thumb-box {
+    width: 50px;
+    height: 50px;
+    overflow: hidden;
+    border: 1px solid #ccc;
+    margin-top: 2px;
+}
+.thumb-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ============================================
 # 🔍 検索・絞り込み UI
@@ -181,7 +218,7 @@ def render_pagination_controls(position: str):
 render_pagination_controls("top")
 
 # ============================================
-# 🖼️ 商品表示（Cloudinary＋サムネイル切替対応）
+# 🖼️ 商品表示（ギャラリー＋サムネイル切替）
 # ============================================
 start_idx = (st.session_state["page"] - 1) * ITEMS_PER_PAGE
 end_idx = start_idx + ITEMS_PER_PAGE
@@ -189,40 +226,62 @@ page_items = filtered[start_idx:end_idx]
 
 if page_items:
     num_cols = 2
-    for i in range(0, len(page_items), num_cols):
-        row_items = page_items[i:i+num_cols]
+    for row_index in range(0, len(page_items), num_cols):
+        row_items = page_items[row_index:row_index + num_cols]
         cols = st.columns(len(row_items))
 
         for col, item in zip(cols, row_items):
             with col:
                 with st.container():
 
-                    product_id = item.get("商品ID", f"noid_{i}")
+                    product_id = item.get("商品ID", f"noid_{row_index}")
 
                     main_url = item.get("画像URL", "")
                     sub1_url = item.get("画像URLサブ1", "")
                     sub2_url = item.get("画像URLサブ2", "")
 
-                    # 初期表示画像
-                    if f"thumb_{product_id}" not in st.session_state:
-                        st.session_state[f"thumb_{product_id}"] = main_url
+                    # 利用可能な画像一覧（空でないものだけ）
+                    image_candidates = [url for url in [main_url, sub1_url, sub2_url] if url]
 
-                    # メイン画像表示
-                    if st.session_state[f"thumb_{product_id}"]:
-                        st.image(st.session_state[f"thumb_{product_id}"], width=160)
+                    # 表示用の初期画像を決定
+                    if f"thumb_{product_id}" not in st.session_state:
+                        st.session_state[f"thumb_{product_id}"] = image_candidates[0] if image_candidates else ""
+
+                    current_img = st.session_state.get(f"thumb_{product_id}", "")
+
+                    # メイン画像（固定サイズ枠で高さを揃える）
+                    if current_img:
+                        st.markdown(
+                            f"""
+                            <div class="image-box">
+                                <img src="{current_img}" />
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
                     else:
                         st.write("画像なし")
 
-                    # サムネイル切替
+                    # サムネイル切替（固定サイズの小枠）
                     thumb_urls = [main_url, sub1_url, sub2_url]
-                    thumb_labels = ["画像1", "画像2", "画像3"]
                     thumb_cols = st.columns(len(thumb_urls))
 
                     for idx, (thumb_col, url) in enumerate(zip(thumb_cols, thumb_urls)):
+                        if not url:
+                            continue
                         with thumb_col:
-                            if url:
-                                if st.button(thumb_labels[idx], key=f"thumbbtn_{product_id}_{idx}"):
-                                    st.session_state[f"thumb_{product_id}"] = url
+                            # 画像を表示する枠
+                            st.markdown(
+                                f"""
+                                <div class="thumb-box">
+                                    <img src="{url}" />
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+                            # クリックでメイン画像を切替
+                            if st.button(f"{idx+1}", key=f"thumbbtn_{product_id}_{idx}"):
+                                st.session_state[f"thumb_{product_id}"] = url
 
                     # 商品情報
                     st.markdown(f"**{item.get('商品名', '不明')}**")
@@ -234,7 +293,7 @@ if page_items:
 
                     # 購入ボタン
                     if item.get("ステータス") == "出品中":
-                        if st.button("購入する", key=f"buy_{product_id}_{i}"):
+                        if st.button("購入する", key=f"buy_{product_id}_{row_index}"):
                             st.session_state["selected_product"] = item
                             st.switch_page("pages/4_購入画面.py")
                             st.stop()
