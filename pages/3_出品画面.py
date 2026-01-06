@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 import gspread
 import json
 from PIL import Image, UnidentifiedImageError, ImageOps
@@ -31,7 +30,7 @@ else:
         st.stop()
     st.stop()
 
-# ✅ 投稿完了後のメッセージと遷移ボタン（再描画後に表示）
+# ✅ 投稿完了後のメッセージと遷移ボタン
 if st.session_state.get("posted"):
     st.success("商品を出品しました！")
     if st.button("マイページ（出品）へ移動"):
@@ -39,7 +38,7 @@ if st.session_state.get("posted"):
         st.switch_page("pages/7_マイページ（出品）.py")
     st.stop()
 
-# ✅ OAuth認証とサービス初期化（Sheetsのみ）
+# ✅ OAuth認証（Sheetsのみ）
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
@@ -49,7 +48,7 @@ except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
 
-# ✅ Cloudinary認証（secrets.tomlに保存済み）
+# ✅ Cloudinary認証
 cloudinary.config(
     cloud_name = st.secrets["CLOUDINARY_CLOUD_NAME"],
     api_key = st.secrets["CLOUDINARY_API_KEY"],
@@ -60,11 +59,12 @@ cloudinary.config(
 user_id = st.session_state.get("id", "")
 username = st.session_state.get("username", "不明")
 
-# ✅ 入力フォーム
+# ✅ 入力フォーム（順番整理済み）
 name = st.text_input("商品名")
 price = st.number_input("価格", min_value=0)
-desc = st.text_area("説明")
 category = st.selectbox("カテゴリ", ["衣類", "雑貨", "日用品", "本", "スポーツ", "その他"])
+condition = st.selectbox("状態", ["新品", "中古"])
+desc = st.text_area("説明")
 image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png"])
 submit = st.button("出品する")
 
@@ -76,7 +76,7 @@ if submit:
 
     try:
         img = Image.open(image_file)
-        img = ImageOps.exif_transpose(img)  # ✅ Exif補正
+        img = ImageOps.exif_transpose(img)
     except UnidentifiedImageError:
         st.error("画像の読み込みに失敗しました。jpg/png形式で再アップロードしてください。")
         st.stop()
@@ -99,14 +99,14 @@ if submit:
         st.error(f"Cloudinaryへの画像アップロードに失敗しました: {e}")
         st.stop()
 
-    # ✅ 商品情報の登録
+    # ✅ 商品情報の登録（状態列を追加）
     product_id = str(uuid.uuid4())
     jst = pytz.timezone("Asia/Tokyo")
     now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
     status = "出品中"
 
     new_row = [
-        product_id, name, price, desc, image_url,
+        product_id, name, price, desc, condition, image_url,
         user_id, username, now, category,
         "", "", "", status
     ]
