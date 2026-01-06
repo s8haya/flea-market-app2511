@@ -30,7 +30,7 @@ else:
     st.stop()
 
 # ============================================
-# 📦 商品情報の取得
+# 📦 商品情報の取得（初期）
 # ============================================
 product = st.session_state.get("selected_product")
 if not product:
@@ -49,6 +49,19 @@ try:
 except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
+
+# ============================================
+# 🆕 商品情報を最新化（シートから再取得）
+# ============================================
+product_id = product.get("商品ID")
+try:
+    all_data = sheet.get_all_records()
+    updated = next((row for row in all_data if row.get("商品ID") == product_id), None)
+    if updated:
+        st.session_state["selected_product"] = updated
+        product = updated
+except Exception:
+    pass
 
 # ============================================
 # 🎨 CSS（ギャラリー固定枠）
@@ -81,24 +94,11 @@ st.markdown("""
     height: 100%;
     object-fit: cover;
 }
-.buy-button {
-    background-color: #ff6b6b;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    border: none;
-    font-size: 18px;
-    font-weight: bold;
-    cursor: pointer;
-}
-.buy-button:hover {
-    background-color: #ff4b4b;
-}
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================
-# 🖼️ ギャラリー表示（メイン＋サムネイル）
+# 🖼️ ギャラリー表示
 # ============================================
 main_url = product.get("画像URL", "")
 sub1_url = product.get("画像URLサブ1", "")
@@ -108,13 +108,11 @@ image_candidates = [url for url in [main_url, sub1_url, sub2_url] if url]
 
 product_id = product.get("商品ID", "noid")
 
-# 初期表示
 if f"gallery_{product_id}" not in st.session_state:
     st.session_state[f"gallery_{product_id}"] = image_candidates[0] if image_candidates else ""
 
 current_img = st.session_state[f"gallery_{product_id}"]
 
-# メイン画像
 if current_img:
     st.markdown(
         f"""
@@ -127,7 +125,6 @@ if current_img:
 else:
     st.write("画像なし")
 
-# サムネイル
 thumb_cols = st.columns(3)
 thumb_urls = [main_url, sub1_url, sub2_url]
 
@@ -184,10 +181,10 @@ if st.button("購入する", key="buy_main"):
             jst = pytz.timezone("Asia/Tokyo")
             now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
 
-            sheet.update_cell(row_index + 2, 13, current_user_id)  # M列: 購入者ID
-            sheet.update_cell(row_index + 2, 14, st.session_state.get("username", ""))  # N列: 購入者名
-            sheet.update_cell(row_index + 2, 15, now)              # O列: 購入日時
-            sheet.update_cell(row_index + 2, 16, "購入手続き中")    # P列: ステータス
+            sheet.update_cell(row_index + 2, 13, current_user_id)
+            sheet.update_cell(row_index + 2, 14, st.session_state.get("username", ""))
+            sheet.update_cell(row_index + 2, 15, now)
+            sheet.update_cell(row_index + 2, 16, "購入手続き中")
             time.sleep(1)
 
             st.success("購入手続きに進みます")
