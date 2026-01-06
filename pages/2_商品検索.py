@@ -59,7 +59,7 @@ with st.container():
     with col2:
         category_filter = st.selectbox("📦 カテゴリ絞り込み", ["すべて"] + sorted(set(row.get("カテゴリ", "") for row in data)))
     with col3:
-        seller_filter = st.selectbox("👤 出品者絞り込み", ["すべて"] + sorted(set(row.get("出品者名", "") for row in data)))
+        condition_filter = st.selectbox("🧺 状態絞り込み", ["すべて"] + sorted(set(row.get("状態", "") for row in data)))
 
     col4, col5, col6 = st.columns(3)
     with col4:
@@ -78,7 +78,7 @@ if "prev_filters" not in st.session_state:
 current_filters = {
     "search": search,
     "category": category_filter,
-    "seller": seller_filter,
+    "condition": condition_filter,
     "status": status_filter,
     "sort": sort_option
 }
@@ -95,8 +95,8 @@ if search:
     filtered = [item for item in filtered if search.lower() in item.get("商品名", "").lower()]
 if category_filter != "すべて":
     filtered = [item for item in filtered if item.get("カテゴリ") == category_filter]
-if seller_filter != "すべて":
-    filtered = [item for item in filtered if item.get("出品者名") == seller_filter]
+if condition_filter != "すべて":
+    filtered = [item for item in filtered if item.get("状態") == condition_filter]
 if status_filter == "出品中のみ":
     filtered = [item for item in filtered if item.get("ステータス") == "出品中"]
 elif status_filter == "売却済":
@@ -159,22 +159,22 @@ if page_items:
             with col:
                 with st.container():
                     image_url = item.get("画像URL", "")
-
                     if image_url:
-                        # Cloudinary画像を高速表示
                         st.image(image_url, width=160)
                     else:
                         st.write("画像なし")
 
                     st.markdown(f"**{item.get('商品名', '不明')}**")
-                    st.caption(f"{item.get('価格', '不明')}円 / {item.get('カテゴリ', '不明')}")
-                    st.caption(f"{item.get('出品者名', '不明')} / {item.get('投稿日時', '不明')}")
+                    st.markdown(f"**{item.get('価格', '不明')}円**")
+                    st.caption(f"カテゴリ: {item.get('カテゴリ', '不明')}")
+                    st.caption(f"状態: {item.get('状態', '不明')}")
+                    st.caption(f"出品日時: {item.get('投稿日時', '不明')}")
                     st.caption(f"ステータス: {item.get('ステータス', '不明')}")
 
                     if item.get("ステータス") == "出品中":
                         product_id = item.get("商品ID")
                         if product_id:
-                            if st.button("購入する", key=f"buy_{product_id}"):
+                            if st.button("購入する", key=f"buy_{product_id}_{i}"):
                                 st.session_state["selected_product"] = item
                                 st.switch_page("pages/4_購入画面.py")
                                 st.stop()
