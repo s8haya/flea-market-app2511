@@ -1,15 +1,15 @@
 import streamlit as st
 import gspread
 import json
-import requests
-from PIL import Image
-import io
 from google.oauth2.credentials import Credentials
+from datetime import datetime
 
 st.set_page_config(page_title="マイページ（購入）", layout="centered")
 st.title("マイページ（購入）")
 
-# ✅ ログインチェック＋ヘッダー
+# ============================================
+# 🔐 ログインチェック
+# ============================================
 if st.session_state.get("logged_in"):
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
@@ -25,7 +25,9 @@ else:
         st.stop()
     st.stop()
 
-# ✅ OAuth認証
+# ============================================
+# 🔑 OAuth認証
+# ============================================
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
@@ -35,45 +37,67 @@ except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
 
-# ✅ 商品データ取得
+# ============================================
+# 📄 購入履歴データ取得
+# ============================================
 try:
     raw_data = sheet.get_all_records()
     user_id = str(st.session_state.get("id", "")).strip()
-    purchased_items = [row for row in raw_data if str(row.get("購入者", "")).strip() == user_id]
+    purchased_items = [
+        row for row in raw_data
+        if str(row.get("購入者", "")).strip() == user_id
+    ]
 except Exception as e:
     st.error(f"購入履歴の取得に失敗しました: {e}")
     st.stop()
 
-# ✅ 商品表示
+# ============================================
+# 🕒 購入日時で新しい順にソート
+# ============================================
+def parse_dt(dt):
+    try:
+        return datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
+    except:
+        return datetime.min
+
+purchased_items.sort(key=lambda x: parse_dt(x.get("購入日時", "")), reverse=True)
+
+# ============================================
+# 🖼️ 商品表示（Cloudinary対応）
+# ============================================
 if purchased_items:
     st.subheader("購入した商品一覧")
+
     for item in purchased_items:
         with st.container(border=True):
+
+            # Cloudinary画像を高速表示
             image_url = item.get("画像URL", "")
             if image_url:
-                try:
-                    response = requests.get(image_url)
-                    img = Image.open(io.BytesIO(response.content))
-                    st.image(img, width=160)
-                except Exception:
-                    st.caption(f"画像読み込み失敗: {image_url}")
+                st.image(image_url, width=160)
             else:
                 st.write("画像なし")
 
+            # 商品情報
             st.markdown(f"**{item.get('商品名', '不明')}**")
             st.caption(f"{item.get('価格', '不明')}円 / {item.get('カテゴリ', '不明')}")
             st.caption(f"出品者: {item.get('出品者名', '不明')} / 投稿日: {item.get('投稿日時', '不明')}")
+            st.caption(f"購入日時: {item.get('購入日時', '不明')}")
             st.caption(f"ステータス: {item.get('ステータス', '不明')}")
 
+            # 支払い画面へ
             if item.get("ステータス") == "購入手続き中":
                 if st.button("支払い画面へ進む", key=f"pay_{item.get('商品ID')}"):
                     st.session_state["selected_product"] = item
                     st.switch_page("pages/5_支払い画面.py")
                     st.stop()
+
 else:
     st.info("購入履歴がありません。")
 
-# ✅ フッターメニュー（共通4画面）
+# ============================================
+# 📌 フッターメニュー
+# ============================================
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
