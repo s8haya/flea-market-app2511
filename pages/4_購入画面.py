@@ -48,13 +48,7 @@ except Exception as e:
 # ✅ 商品表示
 image_url = product.get("画像URL", "")
 if image_url:
-    try:
-        response = requests.get(image_url)
-        img = Image.open(io.BytesIO(response.content))
-        st.image(img, width=240)
-    except Exception:
-        st.warning("画像の読み込みに失敗しました。")
-        st.caption(f"画像URL: {image_url}")
+    st.image(image_url, width=240)
 else:
     st.write("画像なし")
 
