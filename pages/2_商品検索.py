@@ -181,7 +181,7 @@ def render_pagination_controls(position: str):
 render_pagination_controls("top")
 
 # ============================================
-# 🖼️ 商品表示（Cloudinary対応）
+# 🖼️ 商品表示（Cloudinary＋サムネイル切替対応）
 # ============================================
 start_idx = (st.session_state["page"] - 1) * ITEMS_PER_PAGE
 end_idx = start_idx + ITEMS_PER_PAGE
@@ -197,14 +197,34 @@ if page_items:
             with col:
                 with st.container():
 
-                    # 画像表示（Cloudinary）
-                    image_url = item.get("画像URL", "")
-                    if image_url:
-                        st.image(image_url, width=160)
+                    product_id = item.get("商品ID", f"noid_{i}")
+
+                    main_url = item.get("画像URL", "")
+                    sub1_url = item.get("画像URLサブ1", "")
+                    sub2_url = item.get("画像URLサブ2", "")
+
+                    # 初期表示画像
+                    if f"thumb_{product_id}" not in st.session_state:
+                        st.session_state[f"thumb_{product_id}"] = main_url
+
+                    # メイン画像表示
+                    if st.session_state[f"thumb_{product_id}"]:
+                        st.image(st.session_state[f"thumb_{product_id}"], width=160)
                     else:
                         st.write("画像なし")
 
-                    # 商品情報（出品者は非表示）
+                    # サムネイル切替
+                    thumb_urls = [main_url, sub1_url, sub2_url]
+                    thumb_labels = ["画像1", "画像2", "画像3"]
+                    thumb_cols = st.columns(len(thumb_urls))
+
+                    for idx, (thumb_col, url) in enumerate(zip(thumb_cols, thumb_urls)):
+                        with thumb_col:
+                            if url:
+                                if st.button(thumb_labels[idx], key=f"thumbbtn_{product_id}_{idx}"):
+                                    st.session_state[f"thumb_{product_id}"] = url
+
+                    # 商品情報
                     st.markdown(f"**{item.get('商品名', '不明')}**")
                     st.markdown(f"**{item.get('価格', '不明')}円**")
                     st.caption(f"カテゴリ: {item.get('カテゴリ', '不明')}")
@@ -214,12 +234,10 @@ if page_items:
 
                     # 購入ボタン
                     if item.get("ステータス") == "出品中":
-                        product_id = item.get("商品ID")
-                        if product_id:
-                            if st.button("購入する", key=f"buy_{product_id}_{i}"):
-                                st.session_state["selected_product"] = item
-                                st.switch_page("pages/4_購入画面.py")
-                                st.stop()
+                        if st.button("購入する", key=f"buy_{product_id}_{i}"):
+                            st.session_state["selected_product"] = item
+                            st.switch_page("pages/4_購入画面.py")
+                            st.stop()
 else:
     st.warning("該当する商品が見つかりませんでした。")
 
