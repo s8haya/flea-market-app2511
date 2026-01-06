@@ -14,7 +14,9 @@ import pandas as pd
 st.set_page_config(page_title="支払い画面", layout="centered")
 st.title("支払い画面")
 
-# ✅ ログインチェック＋ヘッダー
+# ---------------------------------------------------------
+# ログインチェック
+# ---------------------------------------------------------
 if st.session_state.get("logged_in"):
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
@@ -30,14 +32,18 @@ else:
         st.stop()
     st.stop()
 
-# ✅ 商品情報の取得
+# ---------------------------------------------------------
+# 商品情報取得
+# ---------------------------------------------------------
 product = st.session_state.get("selected_product")
 if not product:
     st.warning("商品情報が見つかりませんでした。")
     st.switch_page("pages/2_商品検索.py")
     st.stop()
 
-# ✅ OAuth認証
+# ---------------------------------------------------------
+# OAuth 認証
+# ---------------------------------------------------------
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
@@ -48,7 +54,9 @@ except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
 
-# ✅ メール送信関数（CC対応）
+# ---------------------------------------------------------
+# メール送信関数（CC対応）
+# ---------------------------------------------------------
 def send_mail(to_list, subject, body, cc_list=None):
     from_addr = st.secrets["EMAIL_ADDRESS"]
     password = st.secrets["EMAIL_PASSWORD"]
@@ -71,9 +79,9 @@ def send_mail(to_list, subject, body, cc_list=None):
         st.error(f"メール送信に失敗しました: {e}")
         return False
 
-# ============================================
+# ---------------------------------------------------------
 # 商品情報表示（出品者情報は表示しない）
-# ============================================
+# ---------------------------------------------------------
 st.subheader("購入商品情報")
 st.markdown(f"**{product.get('商品名', '不明')}**")
 st.write(f"価格: {product.get('価格', '不明')}円")
@@ -93,33 +101,46 @@ except Exception:
     st.error("QRコード画像の読み込みに失敗しました。QRsuzuki.png が正しく配置されているか確認してください。")
     st.stop()
 
+# ---------------------------------------------------------
 # 現金払い案内
+# ---------------------------------------------------------
 st.caption("現金払いを希望の方は直接「ITデジ戦 鈴木（啓）・工藤・木屋」まで連絡ください。")
 
-# ============================================
-# 現金払い依頼メールボタン
-# ============================================
+# ---------------------------------------------------------
+# 現金払い依頼メール（確認ステップ付き）
+# ---------------------------------------------------------
 st.subheader("現金払いの事務局連絡")
 
-if st.button("事務局宛のシステム依頼メール（自動配信）"):
-    confirm = st.confirm("現金払い依頼メールを事務局に送信しますか？（出品者には送信されません）")
-    if confirm:
-        try:
-            user_df = pd.DataFrame(user_sheet.get_all_records(), dtype=str)
-            buyer_id = str(product.get("購入者", "")).strip()
+if "confirm_cash_mail" not in st.session_state:
+    st.session_state["confirm_cash_mail"] = False
 
-            buyer_email = user_df.query("id == @buyer_id")["mail"].values[0]
-            buyer_dept = user_df.query("id == @buyer_id")["department"].values[0]
-            buyer_name = st.session_state["username"]
+if not st.session_state["confirm_cash_mail"]:
+    if st.button("事務局宛のシステム依頼メール（自動配信）"):
+        st.session_state["confirm_cash_mail"] = True
+        st.rerun()
+else:
+    st.warning("現金払い依頼メールを事務局に送信しますか？（出品者には送信されません）")
 
-            product_name = product.get("商品名", "")
-            price = product.get("価格", "")
-            category = product.get("カテゴリ", "")
-            purchase_time = datetime.now(pytz.timezone("Asia/Tokyo")).strftime("%Y-%m-%d %H:%M:%S")
+    col1, col2 = st.columns(2)
 
-            subject = f"【現金払い依頼】{buyer_dept} {buyer_name}さんが「{product_name}」の現金払いを希望しています"
+    with col1:
+        if st.button("送信する"):
+            try:
+                user_df = pd.DataFrame(user_sheet.get_all_records(), dtype=str)
+                buyer_id = str(product.get("購入者", "")).strip()
 
-            body = f"""
+                buyer_email = user_df.query("id == @buyer_id")["mail"].values[0]
+                buyer_dept = user_df.query("id == @buyer_id")["department"].values[0]
+                buyer_name = st.session_state["username"]
+
+                product_name = product.get("商品名", "")
+                price = product.get("価格", "")
+                category = product.get("カテゴリ", "")
+                purchase_time = datetime.now(pytz.timezone("Asia/Tokyo")).strftime("%Y-%m-%d %H:%M:%S")
+
+                subject = f"【現金払い依頼】{buyer_dept} {buyer_name}さんが「{product_name}」の現金払いを希望しています"
+
+                body = f"""
 事務局各位
 
 以下の商品について、購入者より現金払いの希望がありました。
@@ -134,28 +155,35 @@ if st.button("事務局宛のシステム依頼メール（自動配信）"):
 このメールはシステムからの自動配信です。
 """
 
-            send_mail(
-                [buyer_email],
-                subject,
-                body,
-                cc_list=[
-                    "ke7-suzuki@meijiyasuda.co.jp",
-                    "ji-kudou@meijiyasuda.co.jp",
-                    "ha-kiya@meijiyasuda.co.jp"
-                ]
-            )
+                send_mail(
+                    [buyer_email],
+                    subject,
+                    body,
+                    cc_list=[
+                        "ke7-suzuki@meijiyasuda.co.jp",
+                        "ji-kudou@meijiyasuda.co.jp",
+                        "ha-kiya@meijiyasuda.co.jp"
+                    ]
+                )
 
-            st.success("事務局宛に現金払い依頼メールを送信しました。対応をお待ちください。")
+                st.success("事務局宛に現金払い依頼メールを送信しました。対応をお待ちください。")
 
-        except Exception as e:
-            st.error(f"現金払い依頼メールの送信に失敗しました: {e}")
+            except Exception as e:
+                st.error(f"現金払い依頼メールの送信に失敗しました: {e}")
+
+            st.session_state["confirm_cash_mail"] = False
+
+    with col2:
+        if st.button("キャンセル"):
+            st.session_state["confirm_cash_mail"] = False
+            st.info("送信をキャンセルしました。")
 
 st.divider()
 st.subheader("支払い後の操作")
 
-# ============================================
+# ---------------------------------------------------------
 # 支払い済処理
-# ============================================
+# ---------------------------------------------------------
 if st.button("支払い済"):
     try:
         product_id = product.get("商品ID")
@@ -233,13 +261,17 @@ if st.button("支払い済"):
     except Exception as e:
         st.error(f"支払い処理中にエラーが発生しました: {e}")
 
+# ---------------------------------------------------------
 # あとで支払う
+# ---------------------------------------------------------
 if st.button("あとで支払う"):
     st.info("マイページから後ほどお支払いください。")
     st.switch_page("pages/6_マイページ（購入）.py")
     st.stop()
 
+# ---------------------------------------------------------
 # フッターメニュー
+# ---------------------------------------------------------
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
