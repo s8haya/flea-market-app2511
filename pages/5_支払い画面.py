@@ -85,10 +85,7 @@ def send_mail(to_list, subject, body, cc_list=None):
 st.subheader("購入商品情報")
 st.markdown(f"**{product.get('商品名', '不明')}**")
 st.write(f"価格: {product.get('価格', '不明')}円")
-st.write(f"カテゴリ: {product.get('カテゴリ', '不明')}")
-st.write(product.get("説明", ""))
-st.caption(f"投稿日: {product.get('投稿日時', '不明')}")
-st.caption(f"ステータス: {product.get('ステータス', '不明')}")
+st.caption("※出品者情報は、下記支払い対応後に開示されます。")
 
 st.divider()
 st.subheader("以下のQRコードからお支払いください")
@@ -99,6 +96,14 @@ try:
     st.image(qr_image, width=240)
 except Exception:
     st.error("QRコード画像の読み込みに失敗しました。QRsuzuki.png が正しく配置されているか確認してください。")
+    st.stop()
+
+# ---------------------------------------------------------
+# あとで支払う
+# ---------------------------------------------------------
+if st.button("paypayであとで支払う"):
+    st.info("マイページから後ほどお支払いください。")
+    st.switch_page("pages/6_マイページ（購入）.py")
     st.stop()
 
 # ---------------------------------------------------------
@@ -267,14 +272,6 @@ if st.button("支払い済"):
 
     except Exception as e:
         st.error(f"支払い処理中にエラーが発生しました: {e}")
-
-# ---------------------------------------------------------
-# あとで支払う
-# ---------------------------------------------------------
-if st.button("あとで支払う"):
-    st.info("マイページから後ほどお支払いください。")
-    st.switch_page("pages/6_マイページ（購入）.py")
-    st.stop()
 
 # ---------------------------------------------------------
 # フッターメニュー
