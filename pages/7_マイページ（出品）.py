@@ -55,6 +55,7 @@ if listed_items:
                 try:
                     response = requests.get(image_url)
                     img = Image.open(io.BytesIO(response.content))
+                    img = ImageOps.exif_transpose(img)
                     st.image(img, width=160)
                 except Exception:
                     st.caption(f"画像読み込み失敗: {image_url}")
