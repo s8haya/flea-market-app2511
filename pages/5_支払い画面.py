@@ -87,7 +87,7 @@ if st.button("支払い済"):
             st.warning("現在のステータスでは支払い処理を受け付けられません。")
             st.stop()
 
-        sheet.update_cell(row_index + 2, 13, "支払い確認中")  # M列: ステータス
+        sheet.update_cell(row_index + 2, 16, "支払い確認中")  # M列: ステータス
         time.sleep(1)
         st.success("購入ありがとうございました。出品者にお声かけの上、個人間で商品譲渡の対応をお願いします。")
     except Exception as e:

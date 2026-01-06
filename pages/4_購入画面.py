@@ -184,10 +184,10 @@ if st.button("購入する", key="buy_main"):
             jst = pytz.timezone("Asia/Tokyo")
             now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
 
-            sheet.update_cell(row_index + 2, 10, current_user_id)
-            sheet.update_cell(row_index + 2, 11, st.session_state.get("username", ""))
-            sheet.update_cell(row_index + 2, 12, now)
-            sheet.update_cell(row_index + 2, 13, "購入手続き中")
+            sheet.update_cell(row_index + 2, 13, current_user_id)  # M列: 購入者ID
+            sheet.update_cell(row_index + 2, 14, st.session_state.get("username", ""))  # N列: 購入者名
+            sheet.update_cell(row_index + 2, 15, now)              # O列: 購入日時
+            sheet.update_cell(row_index + 2, 16, "購入手続き中")    # P列: ステータス
             time.sleep(1)
 
             st.success("購入手続きに進みます")
