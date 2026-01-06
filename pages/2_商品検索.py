@@ -36,9 +36,8 @@ def get_gspread_client():
 gc = get_gspread_client()
 
 # ============================================
-# 📄 商品データ取得（キャッシュ）
+# 📄 商品データ取得（キャッシュしない → 最新化）
 # ============================================
-@st.cache_data(ttl=60)
 def load_product_data():
     try:
         sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
@@ -304,7 +303,7 @@ if page_items:
                 st.caption(f"出品日時: {item.get('投稿日時', '不明')}")
                 st.caption(f"ステータス: {item.get('ステータス', '不明')}")
 
-                # 購入ボタン（リッチデザイン）
+                # 購入ボタン
                 if item.get("ステータス") == "出品中":
                     if st.button("購入する", key=f"buy_{product_id}_{row_index}"):
                         st.session_state["selected_product"] = item
