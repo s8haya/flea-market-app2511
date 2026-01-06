@@ -143,18 +143,6 @@ start_idx = (st.session_state["page"] - 1) * ITEMS_PER_PAGE
 end_idx = start_idx + ITEMS_PER_PAGE
 page_items = filtered[start_idx:end_idx]
 
-# ✅ 画像取得＋処理をキャッシュ化
-@st.cache_data(show_spinner=False)
-def fetch_and_process_image(url):
-    try:
-        response = requests.get(url, stream=True, timeout=3)
-        img = Image.open(io.BytesIO(response.content))
-        img = crop_center_square(img)
-        img = img.resize((160, 160))
-        return img
-    except Exception:
-        return None
-
 # ✅ 画像トリミング関数
 def crop_center_square(img):
     width, height = img.size
@@ -177,12 +165,11 @@ if page_items:
                     image_url = item.get("画像URL", "")
                     if image_url:
                         try:
-                            img = fetch_and_process_image(image_url)
-                            if img:
-                               st.image(img)
-                            else:
-                            st.warning("画像の読み込みに失敗しました。")
-                            st.caption(f"画像URL: {image_url}")
+                            response = requests.get(image_url, stream=True, timeout=3)
+                            img = Image.open(io.BytesIO(response.content))
+                            img = crop_center_square(img)
+                            img = img.resize((160, 160))
+                            st.image(img)
                         except Exception:
                             st.warning("画像の読み込みに失敗しました。")
                             st.caption(f"画像URL: {image_url}")
