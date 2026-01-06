@@ -1,7 +1,6 @@
 import streamlit as st
 import gspread
 import json
-import requests
 from PIL import Image, UnidentifiedImageError
 import io
 from datetime import datetime
@@ -12,7 +11,9 @@ import time
 st.set_page_config(page_title="購入確認", layout="centered")
 st.title("購入確認画面")
 
-# ✅ ログインチェック＋ヘッダー
+# ============================================
+# 🔐 ログインチェック
+# ============================================
 if st.session_state.get("logged_in"):
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
@@ -28,14 +29,18 @@ else:
         st.stop()
     st.stop()
 
-# ✅ 商品情報の取得
+# ============================================
+# 📦 商品情報の取得
+# ============================================
 product = st.session_state.get("selected_product")
 if not product:
     st.warning("商品情報が見つかりませんでした。")
     st.switch_page("pages/2_商品検索.py")
     st.stop()
 
-# ✅ OAuth認証
+# ============================================
+# 🔑 OAuth認証
+# ============================================
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
@@ -45,33 +50,127 @@ except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
 
-# ✅ 商品表示
-image_url = product.get("画像URL", "")
-if image_url:
-    st.image(image_url, width=240)
+# ============================================
+# 🎨 CSS（ギャラリー固定枠）
+# ============================================
+st.markdown("""
+<style>
+.image-box {
+    width: 260px;
+    height: 260px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.image-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.thumb-box {
+    width: 60px;
+    height: 60px;
+    overflow: hidden;
+    border: 1px solid #ccc;
+    margin-top: 4px;
+}
+.thumb-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.buy-button {
+    background-color: #ff6b6b;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.buy-button:hover {
+    background-color: #ff4b4b;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ============================================
+# 🖼️ ギャラリー表示（メイン＋サムネイル）
+# ============================================
+main_url = product.get("画像URL", "")
+sub1_url = product.get("画像URLサブ1", "")
+sub2_url = product.get("画像URLサブ2", "")
+
+image_candidates = [url for url in [main_url, sub1_url, sub2_url] if url]
+
+product_id = product.get("商品ID", "noid")
+
+# 初期表示
+if f"gallery_{product_id}" not in st.session_state:
+    st.session_state[f"gallery_{product_id}"] = image_candidates[0] if image_candidates else ""
+
+current_img = st.session_state[f"gallery_{product_id}"]
+
+# メイン画像
+if current_img:
+    st.markdown(
+        f"""
+        <div class="image-box">
+            <img src="{current_img}" />
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 else:
     st.write("画像なし")
 
+# サムネイル
+thumb_cols = st.columns(3)
+thumb_urls = [main_url, sub1_url, sub2_url]
+
+for idx, (col, url) in enumerate(zip(thumb_cols, thumb_urls)):
+    if not url:
+        continue
+    with col:
+        st.markdown(
+            f"""
+            <div class="thumb-box">
+                <img src="{url}" />
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        if st.button(f"{idx+1}", key=f"thumbbtn_confirm_{product_id}_{idx}"):
+            st.session_state[f"gallery_{product_id}"] = url
+
+# ============================================
+# 📄 商品情報（出品者情報は非表示）
+# ============================================
 st.markdown(f"### {product.get('商品名', '不明')}")
 st.write(f"価格: {product.get('価格', '不明')}円")
 st.write(f"カテゴリ: {product.get('カテゴリ', '不明')}")
 
-# ✅ 商品説明（改行1回でも反映）
 desc_text = product.get("説明", "")
 st.markdown(desc_text.replace("\n", "<br>"), unsafe_allow_html=True)
 
-st.caption(f"出品者: {product.get('出品者名', '不明')} / 投稿日: {product.get('投稿日時', '不明')}")
+st.caption(f"出品日時: {product.get('投稿日時', '不明')}")
 st.caption(f"ステータス: {product.get('ステータス', '不明')}")
 
 st.divider()
 st.subheader("本当に購入しますか？")
 
-# ✅ 購入処理
-if st.button("購入する"):
+# ============================================
+# 🛒 購入処理
+# ============================================
+if st.button("購入する", key="buy_main"):
     try:
         product_id = product.get("商品ID")
         all_data = sheet.get_all_records()
         row_index = next((i for i, row in enumerate(all_data) if row.get("商品ID") == product_id), None)
+
         if row_index is None:
             st.error("商品が見つかりませんでした。")
             st.stop()
@@ -85,17 +184,15 @@ if st.button("購入する"):
             jst = pytz.timezone("Asia/Tokyo")
             now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
 
-            try:
-                sheet.update_cell(row_index + 2, 10, current_user_id)                     # J列: 購入者
-                sheet.update_cell(row_index + 2, 11, st.session_state.get("username", "")) # K列: 購入者名
-                sheet.update_cell(row_index + 2, 12, now)                                  # L列: 購入日時
-                sheet.update_cell(row_index + 2, 13, "購入手続き中")                        # M列: ステータス
-                time.sleep(1)
-                st.success("購入手続きに進みます")
-                st.switch_page("pages/5_支払い画面.py")
-                st.stop()
-            except Exception as e:
-                st.error("購入処理中にエラーが発生しました。もう一度お試しください。")
+            sheet.update_cell(row_index + 2, 10, current_user_id)
+            sheet.update_cell(row_index + 2, 11, st.session_state.get("username", ""))
+            sheet.update_cell(row_index + 2, 12, now)
+            sheet.update_cell(row_index + 2, 13, "購入手続き中")
+            time.sleep(1)
+
+            st.success("購入手続きに進みます")
+            st.switch_page("pages/5_支払い画面.py")
+            st.stop()
 
         elif current_buyer_id == current_user_id:
             st.success("購入済みの商品です。支払い画面に進みます")
@@ -103,35 +200,25 @@ if st.button("購入する"):
             st.stop()
 
         else:
-            st.error("ほかの方がすでに購入されたか、商品が取下げられた可能性があります。")
+            st.error("ほかの方がすでに購入された可能性があります。")
             st.switch_page("pages/2_商品検索.py")
             st.stop()
 
-    except Exception as e:
+    except Exception:
         st.error("購入処理中にエラーが発生しました。")
         st.switch_page("pages/2_商品検索.py")
         st.stop()
 
-# ✅ キャンセル処理
+# ============================================
+# ❌ キャンセル
+# ============================================
 if st.button("キャンセルする"):
-    try:
-        product_id = product.get("商品ID")
-        all_data = sheet.get_all_records()
-        row_index = next((i for i, row in enumerate(all_data) if row.get("商品ID") == product_id), None)
-        if row_index is None:
-            st.error("商品が見つかりませんでした。")
-            st.stop()
+    st.switch_page("pages/2_商品検索.py")
+    st.stop()
 
-        current_status = all_data[row_index].get("ステータス", "")
-        if current_status in ["出品中", "取下げ"]:
-            st.switch_page("pages/2_商品検索.py")
-            st.stop()
-        else:
-            st.warning("すでに商品が購入された等の状態です。照会先に連絡してください。")
-    except Exception as e:
-        st.error("キャンセル処理中にエラーが発生しました。")
-
-# ✅ フッターメニュー（共通4画面）
+# ============================================
+# 📌 フッターメニュー
+# ============================================
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
