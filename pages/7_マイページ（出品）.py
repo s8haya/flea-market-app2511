@@ -1,16 +1,16 @@
 import streamlit as st
 import gspread
 import json
-import requests
-from PIL import Image
-import io
 from google.oauth2.credentials import Credentials
+from datetime import datetime
 import time
 
 st.set_page_config(page_title="マイページ（出品）", layout="centered")
 st.title("マイページ（出品）")
 
-# ✅ ログインチェック＋ヘッダー
+# ============================================
+# 🔐 ログインチェック
+# ============================================
 if st.session_state.get("logged_in"):
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
@@ -26,7 +26,9 @@ else:
         st.stop()
     st.stop()
 
-# ✅ OAuth認証
+# ============================================
+# 🔑 OAuth認証
+# ============================================
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
@@ -36,32 +38,48 @@ except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
 
-# ✅ 商品データ取得
+# ============================================
+# 📄 出品データ取得
+# ============================================
 try:
     raw_data = sheet.get_all_records()
     user_id = str(st.session_state.get("id", "")).strip()
-    listed_items = [row for row in raw_data if str(row.get("出品者", "")).strip() == user_id]
+    listed_items = [
+        row for row in raw_data
+        if str(row.get("出品者", "")).strip() == user_id
+    ]
 except Exception as e:
     st.error(f"出品履歴の取得に失敗しました: {e}")
     st.stop()
 
-# ✅ 商品表示
+# ============================================
+# 🕒 投稿日時で新しい順にソート
+# ============================================
+def parse_dt(dt):
+    try:
+        return datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
+    except:
+        return datetime.min
+
+listed_items.sort(key=lambda x: parse_dt(x.get("投稿日時", "")), reverse=True)
+
+# ============================================
+# 🖼️ 商品表示（Cloudinary対応）
+# ============================================
 if listed_items:
     st.subheader("出品した商品一覧")
+
     for item in listed_items:
         with st.container(border=True):
+
+            # Cloudinary画像を高速表示
             image_url = item.get("画像URL", "")
             if image_url:
-                try:
-                    response = requests.get(image_url)
-                    img = Image.open(io.BytesIO(response.content))
-                    img = ImageOps.exif_transpose(img)
-                    st.image(img, width=160)
-                except Exception:
-                    st.caption(f"画像読み込み失敗: {image_url}")
+                st.image(image_url, width=160)
             else:
                 st.write("画像なし")
 
+            # 商品情報
             st.markdown(f"**{item.get('商品名', '不明')}**")
             st.caption(f"{item.get('価格', '不明')}円 / {item.get('カテゴリ', '不明')}")
             st.caption(f"投稿日: {item.get('投稿日時', '不明')} / ステータス: {item.get('ステータス', '不明')}")
@@ -69,12 +87,19 @@ if listed_items:
             status = item.get("ステータス", "")
             product_id = str(item.get("商品ID", "")).strip()
 
-            # ✅ 出品中 → 取下げボタン表示
+            # ============================================
+            # 🗑️ 出品中 → 取下げボタン
+            # ============================================
             if status == "出品中":
                 if st.button("出品を取下げる", key=f"withdraw_{product_id}"):
                     try:
                         all_data = sheet.get_all_records()
-                        row_index = next((i for i, row in enumerate(all_data) if str(row.get("商品ID", "")).strip() == product_id), None)
+                        row_index = next(
+                            (i for i, row in enumerate(all_data)
+                             if str(row.get("商品ID", "")).strip() == product_id),
+                            None
+                        )
+
                         if row_index is not None:
                             sheet.update_cell(row_index + 2, 13, "取下げ")  # M列: ステータス
                             time.sleep(1)
@@ -82,10 +107,13 @@ if listed_items:
                             st.rerun()
                         else:
                             st.error("商品が見つかりませんでした。")
+
                     except Exception as e:
                         st.error(f"ステータス更新に失敗しました: {e}")
 
-            # ✅ 購入状況に応じた情報表示
+            # ============================================
+            # 🛒 購入状況に応じた表示
+            # ============================================
             if status in ["購入手続き中", "支払い確認中", "支払い確認済"]:
                 purchaser = item.get("購入者名", "不明")
                 purchase_time = item.get("購入日時", "不明")
@@ -95,10 +123,13 @@ if listed_items:
                     st.warning("⚠️ 支払い処理が完了するまで、物品のお渡しはお待ちください。")
                 else:
                     st.success("✅ 購入者と個別でやり取りのうえ、物品をお渡しください。")
+
 else:
     st.info("出品履歴がありません。")
 
-# ✅ フッターメニュー（共通4画面）
+# ============================================
+# 📌 フッターメニュー
+# ============================================
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
