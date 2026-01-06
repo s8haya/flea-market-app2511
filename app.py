@@ -53,6 +53,21 @@ if st.session_state.get("logged_in"):
     st.divider()
     st.subheader("下のメニューから画面を選択してください。")
 
+    # ✅ 商品シートから未支払い商品チェック
+    try:
+        sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
+        all_products = sheet.get_all_records()
+        user_id = str(st.session_state.get("id", "")).strip()
+        pending_items = [
+            row for row in all_products
+            if str(row.get("購入者", "")).strip() == user_id
+            and row.get("ステータス") == "購入手続き中"
+        ]
+        if pending_items:
+            st.warning("⚠ 購入後、未支払いの商品があります。マイページ（購入）画面を確認してください。")
+    except Exception as e:
+        st.error(f"購入履歴の確認に失敗しました: {e}")
+
 else:
     with st.container():
         input_id = st.text_input("ユーザーID：「職員コード6桁」").strip()
