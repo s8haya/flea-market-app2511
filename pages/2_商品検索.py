@@ -6,7 +6,9 @@ from datetime import datetime
 
 st.set_page_config(page_title="商品検索", layout="centered")
 
-# ✅ ログインチェック＋ヘッダー
+# ============================================
+# 🔐 ログインチェック
+# ============================================
 if st.session_state.get("logged_in"):
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
@@ -22,7 +24,9 @@ else:
         st.stop()
     st.stop()
 
-# ✅ OAuth認証（キャッシュ化）
+# ============================================
+# 🔑 OAuth認証（キャッシュ）
+# ============================================
 @st.cache_resource
 def get_gspread_client():
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
@@ -31,7 +35,9 @@ def get_gspread_client():
 
 gc = get_gspread_client()
 
-# ✅ 商品データ取得（キャッシュ化）
+# ============================================
+# 📄 商品データ取得（キャッシュ）
+# ============================================
 @st.cache_data(ttl=60)
 def load_product_data():
     try:
@@ -49,29 +55,43 @@ data = load_product_data()
 if not data:
     st.stop()
 
-# ============================
+# ============================================
 # 🔍 検索・絞り込み UI
-# ============================
+# ============================================
 with st.container():
     col1, col2, col3 = st.columns(3)
     with col1:
         search = st.text_input("🔍 商品名で検索")
     with col2:
-        category_filter = st.selectbox("📦 カテゴリ絞り込み", ["すべて"] + sorted(set(row.get("カテゴリ", "") for row in data)))
+        category_filter = st.selectbox(
+            "📦 カテゴリ絞り込み",
+            ["すべて"] + sorted(set(row.get("カテゴリ", "") for row in data))
+        )
     with col3:
-        condition_filter = st.selectbox("🧺 状態絞り込み", ["すべて"] + sorted(set(row.get("状態", "") for row in data)))
+        condition_filter = st.selectbox(
+            "🧺 状態絞り込み",
+            ["すべて"] + sorted(set(row.get("状態", "") for row in data))
+        )
 
     col4, col5, col6 = st.columns(3)
     with col4:
-        status_filter = st.selectbox("📌 出品ステータス", ["すべて", "出品中のみ", "売却済"], index=1)
+        status_filter = st.selectbox(
+            "📌 出品ステータス",
+            ["すべて", "出品中のみ", "売却済"],
+            index=1
+        )
     with col5:
-        sort_option = st.radio("並び順", ["新着順", "価格が安い順", "価格が高い順"], horizontal=True)
+        sort_option = st.radio(
+            "並び順",
+            ["新着順", "価格が安い順", "価格が高い順"],
+            horizontal=True
+        )
     with col6:
         st.empty()
 
-# ============================
+# ============================================
 # 🔄 ページリセット（フィルター変更時）
-# ============================
+# ============================================
 if "prev_filters" not in st.session_state:
     st.session_state["prev_filters"] = {}
 
@@ -87,24 +107,40 @@ if st.session_state["prev_filters"] != current_filters:
     st.session_state["page"] = 1
     st.session_state["prev_filters"] = current_filters
 
-# ============================
+# ============================================
 # 🔎 絞り込み処理
-# ============================
+# ============================================
 filtered = data
+
 if search:
-    filtered = [item for item in filtered if search.lower() in item.get("商品名", "").lower()]
+    filtered = [
+        item for item in filtered
+        if search.lower() in item.get("商品名", "").lower()
+    ]
+
 if category_filter != "すべて":
-    filtered = [item for item in filtered if item.get("カテゴリ") == category_filter]
+    filtered = [
+        item for item in filtered
+        if item.get("カテゴリ") == category_filter
+    ]
+
 if condition_filter != "すべて":
-    filtered = [item for item in filtered if item.get("状態") == condition_filter]
+    filtered = [
+        item for item in filtered
+        if item.get("状態") == condition_filter
+    ]
+
 if status_filter == "出品中のみ":
     filtered = [item for item in filtered if item.get("ステータス") == "出品中"]
 elif status_filter == "売却済":
-    filtered = [item for item in filtered if item.get("ステータス") not in ["出品中", "取下げ"]]
+    filtered = [
+        item for item in filtered
+        if item.get("ステータス") not in ["出品中", "取下げ"]
+    ]
 
-# ============================
+# ============================================
 # 🔢 並び替え
-# ============================
+# ============================================
 def parse_datetime(dt_str):
     try:
         return datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
@@ -118,11 +154,12 @@ elif sort_option == "価格が安い順":
 elif sort_option == "価格が高い順":
     filtered.sort(key=lambda x: x.get("価格", 0), reverse=True)
 
-# ============================
+# ============================================
 # 📄 ページネーション
-# ============================
+# ============================================
 ITEMS_PER_PAGE = 6
 total_pages = (len(filtered) - 1) // ITEMS_PER_PAGE + 1
+
 if "page" not in st.session_state:
     st.session_state["page"] = 1
 
@@ -143,9 +180,9 @@ def render_pagination_controls(position: str):
 
 render_pagination_controls("top")
 
-# ============================
+# ============================================
 # 🖼️ 商品表示（Cloudinary対応）
-# ============================
+# ============================================
 start_idx = (st.session_state["page"] - 1) * ITEMS_PER_PAGE
 end_idx = start_idx + ITEMS_PER_PAGE
 page_items = filtered[start_idx:end_idx]
@@ -155,15 +192,19 @@ if page_items:
     for i in range(0, len(page_items), num_cols):
         row_items = page_items[i:i+num_cols]
         cols = st.columns(len(row_items))
+
         for col, item in zip(cols, row_items):
             with col:
                 with st.container():
+
+                    # 画像表示（Cloudinary）
                     image_url = item.get("画像URL", "")
                     if image_url:
                         st.image(image_url, width=160)
                     else:
                         st.write("画像なし")
 
+                    # 商品情報（出品者は非表示）
                     st.markdown(f"**{item.get('商品名', '不明')}**")
                     st.markdown(f"**{item.get('価格', '不明')}円**")
                     st.caption(f"カテゴリ: {item.get('カテゴリ', '不明')}")
@@ -171,6 +212,7 @@ if page_items:
                     st.caption(f"出品日時: {item.get('投稿日時', '不明')}")
                     st.caption(f"ステータス: {item.get('ステータス', '不明')}")
 
+                    # 購入ボタン
                     if item.get("ステータス") == "出品中":
                         product_id = item.get("商品ID")
                         if product_id:
@@ -183,9 +225,9 @@ else:
 
 render_pagination_controls("bottom")
 
-# ============================
+# ============================================
 # 📌 フッターメニュー
-# ============================
+# ============================================
 st.divider()
 st.markdown("### 📌 メニュー")
 with st.container(horizontal=True):
