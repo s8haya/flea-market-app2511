@@ -2,15 +2,15 @@ import streamlit as st
 import pandas as pd
 import gspread
 import json
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError, ImageOps
 from datetime import datetime
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
 from google.oauth2.credentials import Credentials
 import io
 import uuid
 import pytz
 import time
+import cloudinary
+import cloudinary.uploader
 
 st.set_page_config(page_title="出品画面", layout="centered")
 st.title("出品画面")
@@ -39,17 +39,22 @@ if st.session_state.get("posted"):
         st.switch_page("pages/7_マイページ（出品）.py")
     st.stop()
 
-# ✅ OAuth認証とサービス初期化
+# ✅ OAuth認証とサービス初期化（Sheetsのみ）
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
     gc = gspread.authorize(creds)
     sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
-    folder_id = st.secrets["DRIVE_FOLDER_ID"]
-    drive_service = build("drive", "v3", credentials=creds)
 except Exception as e:
-    st.error(f"Google SheetsまたはDriveの認証に失敗しました: {e}")
+    st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
+
+# ✅ Cloudinary認証（secrets.tomlに保存済み）
+cloudinary.config(
+    cloud_name = st.secrets["CLOUDINARY_CLOUD_NAME"],
+    api_key = st.secrets["CLOUDINARY_API_KEY"],
+    api_secret = st.secrets["CLOUDINARY_API_SECRET"]
+)
 
 # ✅ ユーザー情報
 user_id = st.session_state.get("id", "")
@@ -59,7 +64,7 @@ username = st.session_state.get("username", "不明")
 name = st.text_input("商品名")
 price = st.number_input("価格", min_value=0)
 desc = st.text_area("説明")
-category = st.selectbox("カテゴリ", ["衣類", "雑貨", "日用品", "本", "スポーツ","その他"])
+category = st.selectbox("カテゴリ", ["衣類", "雑貨", "日用品", "本", "スポーツ", "その他"])
 image_file = st.file_uploader("商品画像をアップロード（jpg/png形式）", type=["jpg", "jpeg", "png"])
 submit = st.button("出品する")
 
@@ -71,6 +76,7 @@ if submit:
 
     try:
         img = Image.open(image_file)
+        img = ImageOps.exif_transpose(img)  # ✅ Exif補正
     except UnidentifiedImageError:
         st.error("画像の読み込みに失敗しました。jpg/png形式で再アップロードしてください。")
         st.stop()
@@ -85,23 +91,12 @@ if submit:
     img.save(img_buffer, format="PNG")
     img_buffer.seek(0)
 
-    # ✅ 画像アップロード
+    # ✅ Cloudinaryにアップロード
     try:
-        file_metadata = {
-            "name": image_file.name,
-            "parents": [folder_id]
-        }
-        media = MediaIoBaseUpload(img_buffer, mimetype="image/png")
-        uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
-
-        drive_service.permissions().create(
-            fileId=uploaded["id"],
-            body={"role": "reader", "type": "anyone"},
-        ).execute()
-
-        image_url = f"https://drive.google.com/uc?export=view&id={uploaded['id']}"
+        result = cloudinary.uploader.upload(img_buffer, folder="products")
+        image_url = result["secure_url"]
     except Exception as e:
-        st.error(f"画像のアップロードに失敗しました: {e}")
+        st.error(f"Cloudinaryへの画像アップロードに失敗しました: {e}")
         st.stop()
 
     # ✅ 商品情報の登録
@@ -119,8 +114,8 @@ if submit:
     try:
         sheet.append_row(new_row)
         time.sleep(1)
-        st.session_state["posted"] = True  # ✅ 投稿完了フラグ
-        st.rerun()  # ✅ 再描画でボタン表示へ
+        st.session_state["posted"] = True
+        st.rerun()
     except Exception as e:
         st.error(f"商品情報の登録に失敗しました: {e}")
 

@@ -20,3 +20,8 @@ user_sheet_name = "ユーザー管理"  # ← 追加：ユーザー情報用の�
 
 [google_drive]
 folder_id = "1YBamyvLwadFmrpj2p8LUyvxc1r5fGURp"
+
+[Cloudinary_API情報]
+CLOUDINARY_CLOUD_NAME = "dfz8hfao7"
+CLOUDINARY_API_KEY = "295151351822219"
+CLOUDINARY_API_SECRET = "ZmORBuPFtRisx0R8QObY5EclFSA"
