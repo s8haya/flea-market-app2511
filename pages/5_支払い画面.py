@@ -60,14 +60,14 @@ st.subheader("以下のQRコードからお支払いください")
 
 # ✅ QRコード表示
 try:
-    qr_image = Image.open("QRhaya.png")
+    qr_image = Image.open("QRsuzuki.png")
     st.image(qr_image, width=240)
 except Exception:
     st.error("QRコード画像の読み込みに失敗しました。QRhaya.png が正しく配置されているか確認してください。")
     st.stop()
 
 # ✅ 現金払い案内
-st.caption("現金払いを希望の方は直接「林」まで連絡ください。")
+st.caption("現金払いを希望の方は直接「ITデジ戦 鈴木（啓）・工藤・木屋」まで連絡ください。")
 
 st.divider()
 st.subheader("支払い後の操作")
