@@ -6,6 +6,10 @@ from datetime import datetime
 from google.oauth2.credentials import Credentials
 import pytz
 import time
+import smtplib
+from email.mime.text import MIMEText
+from email.utils import formatdate
+import pandas as pd
 
 st.set_page_config(page_title="支払い画面", layout="centered")
 st.title("支払い画面")
@@ -39,9 +43,31 @@ try:
     creds = Credentials.from_authorized_user_info(creds_dict)
     gc = gspread.authorize(creds)
     sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
+    user_sheet = gc.open(st.secrets["USER_SHEET_NAME"]).sheet1
 except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
+
+# ✅ メール送信関数
+def send_mail(to_list, subject, body):
+    from_addr = st.secrets["EMAIL_ADDRESS"]
+    password = st.secrets["EMAIL_PASSWORD"]
+
+    msg = MIMEText(body, "plain", "utf-8")
+    msg["Subject"] = subject
+    msg["From"] = from_addr
+    msg["To"] = ", ".join(to_list)
+    msg["Date"] = formatdate()
+
+    try:
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        server.login(from_addr, password)
+        server.sendmail(from_addr, to_list, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        st.error(f"メール送信に失敗しました: {e}")
+        return False
 
 # ✅ 上部メッセージ
 st.info("寄付金にご協力いただきありがとうございます。支払い後に「支払い済」ボタンを忘れずに押してください。その後、出品者から物品を受領してください。")
@@ -63,7 +89,7 @@ try:
     qr_image = Image.open("QRsuzuki.png")
     st.image(qr_image, width=240)
 except Exception:
-    st.error("QRコード画像の読み込みに失敗しました。QRhaya.png が正しく配置されているか確認してください。")
+    st.error("QRコード画像の読み込みに失敗しました。QRsuzuki.png が正しく配置されているか確認してください。")
     st.stop()
 
 # ✅ 現金払い案内
@@ -87,11 +113,52 @@ if st.button("支払い済"):
             st.warning("現在のステータスでは支払い処理を受け付けられません。")
             st.stop()
 
-        sheet.update_cell(row_index + 2, 16, "支払い確認中")  # M列: ステータス
+        sheet.update_cell(row_index + 2, 16, "支払い確認中")
         time.sleep(1)
+
+        # ✅ メール送信処理
+        user_df = pd.DataFrame(user_sheet.get_all_records(), dtype=str)
+        seller_id = str(product.get("出品者", "")).strip()
+        buyer_id = str(product.get("購入者", "")).strip()
+
+        seller_email = user_df.query("id == @seller_id")["mail"].values[0]
+        buyer_email = user_df.query("id == @buyer_id")["mail"].values[0]
+
+        seller_name = product.get("出品者名", "")
+        buyer_name = st.session_state["username"]
+        product_name = product.get("商品名", "")
+        price = product.get("価格", "")
+        category = product.get("カテゴリ", "")
+        purchase_time = all_data[row_index].get("購入日時", "")
+
+        subject = f"システム自動配信：{seller_name}さんの出品「{product_name}」を{buyer_name}さんが購入しました"
+
+        body = f"""
+{seller_name}さん、{buyer_name}さん
+
+このメールはシステムからの自動配信です。
+
+以下の商品について、購入者による支払いが完了しました。
+
+【商品名】{product_name}
+【価格】{price}円
+【カテゴリ】{category}
+【出品者】{seller_name}
+【購入者】{buyer_name}
+【購入日時】{purchase_time}
+
+出品者の方は、購入者へ商品をお渡しください。
+購入者の方は、出品者から商品を受領してください。
+
+今後ともよろしくお願いいたします。
+"""
+
+        send_mail([seller_email, buyer_email], subject, body)
+
         st.success("購入ありがとうございました。出品者にお声かけの上、個人間で商品譲渡の対応をお願いします。")
+
     except Exception as e:
-        st.error(f"ステータス更新に失敗しました: {e}")
+        st.error(f"支払い処理中にエラーが発生しました: {e}")
 
 # ✅ あとで支払う処理
 if st.button("あとで支払う"):
