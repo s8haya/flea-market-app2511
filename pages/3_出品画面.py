@@ -136,12 +136,10 @@ if submit:
     # ----------------------------------------
     if edit_mode:
 
-        # 既存URLを保持
         main_url = edit_item["画像URL"]
         sub1_url = edit_item.get("画像URLサブ1", "")
         sub2_url = edit_item.get("画像URLサブ2", "")
 
-        # 新しい画像があれば差し替え
         if image_main:
             main_url = process_and_upload(image_main)
         if image_sub1:
@@ -149,7 +147,6 @@ if submit:
         if image_sub2:
             sub2_url = process_and_upload(image_sub2)
 
-        # 該当行を検索
         all_data = sheet.get_all_records()
         row_index = next((i for i, row in enumerate(all_data)
                           if row.get("商品ID") == edit_item["商品ID"]), None)
@@ -158,10 +155,8 @@ if submit:
             st.error("商品が見つかりませんでした。")
             st.stop()
 
-        # 行番号（シートは1行目がヘッダー）
         row_num = row_index + 2
 
-        # 更新データ
         update_row = [
             edit_item["商品ID"], name, price, desc, condition,
             main_url, sub1_url, sub2_url,
@@ -171,7 +166,6 @@ if submit:
             edit_item.get("購入日時", ""), edit_item["ステータス"]
         ]
 
-        # 更新
         sheet.update(f"A{row_num}:P{row_num}", [update_row])
 
         st.success("商品情報を更新しました！")
@@ -204,7 +198,17 @@ if submit:
         ]
 
         sheet.append_row(new_row)
-        st.success("商品を出品しました！")
+
+        # 入力値を初期化
+        for key in ["name", "price", "category", "condition", "desc",
+                    "image_main", "image_sub1", "image_sub2"]:
+            if key in st.session_state:
+                st.session_state.pop(key)
+
+        # 完了メッセージ
+        st.success(f"{st.session_state['username']} さん、商品を出品しました。ありがとうございます。")
+
+        time.sleep(0.8)
         st.rerun()
 
 # ============================================
