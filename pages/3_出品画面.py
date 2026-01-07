@@ -21,15 +21,12 @@ if st.session_state.get("logged_in"):
     with st.container(horizontal=True):
         st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
         if st.button("ログアウト"):
-            st.session_state["logged_in"] = False
-            st.session_state.pop("id", None)
-            st.session_state.pop("username", None)
+            st.session_state.clear()
             st.rerun()
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
         st.switch_page("app.py")
-        st.stop()
     st.stop()
 
 # ============================================
@@ -60,26 +57,40 @@ cloudinary.config(
 )
 
 # ============================================
-# 📝 入力フォーム（編集モード対応）
+# 📝 初期化（新規出品時のみ）
 # ============================================
-name = st.text_input("商品名", value=edit_item["商品名"] if edit_mode else "")
-price = st.number_input("価格", min_value=0, value=int(edit_item["価格"]) if edit_mode else 0)
+if "form_initialized" not in st.session_state:
+    st.session_state["name"] = edit_item["商品名"] if edit_mode else ""
+    st.session_state["price"] = int(edit_item["価格"]) if edit_mode else 0
+    st.session_state["category"] = edit_item["カテゴリ"] if edit_mode else "衣類"
+    st.session_state["condition"] = edit_item["状態"] if edit_mode else "新品"
+    st.session_state["desc"] = edit_item["説明"] if edit_mode else ""
+    st.session_state["image_main"] = None
+    st.session_state["image_sub1"] = None
+    st.session_state["image_sub2"] = None
+    st.session_state["form_initialized"] = True
+
+# ============================================
+# 📝 入力フォーム（session_stateベース）
+# ============================================
+st.session_state["name"] = st.text_input("商品名", st.session_state["name"])
+st.session_state["price"] = st.number_input("価格", min_value=0, value=st.session_state["price"])
 
 category_list = ["衣類", "雑貨", "日用品", "本", "スポーツ", "その他"]
-category = st.selectbox(
+st.session_state["category"] = st.selectbox(
     "カテゴリ",
     category_list,
-    index=category_list.index(edit_item["カテゴリ"]) if edit_mode else 0
+    index=category_list.index(st.session_state["category"])
 )
 
 condition_list = ["新品", "中古"]
-condition = st.selectbox(
+st.session_state["condition"] = st.selectbox(
     "状態",
     condition_list,
-    index=condition_list.index(edit_item["状態"]) if edit_mode else 0
+    index=condition_list.index(st.session_state["condition"])
 )
 
-desc = st.text_area("説明", value=edit_item["説明"] if edit_mode else "")
+st.session_state["desc"] = st.text_area("説明", st.session_state["desc"])
 
 # ============================================
 # 🖼 既存画像プレビュー（編集モードのみ）
@@ -92,10 +103,13 @@ if edit_mode:
     if edit_item.get("画像URLサブ2"):
         st.image(edit_item["画像URLサブ2"], width=200)
 
+# ============================================
+# 🖼 新しい画像アップロード
+# ============================================
 st.markdown("### 新しい画像をアップロード（任意）")
-image_main = st.file_uploader("メイン画像", type=["jpg", "jpeg", "png"])
-image_sub1 = st.file_uploader("サブ画像1", type=["jpg", "jpeg", "png"])
-image_sub2 = st.file_uploader("サブ画像2", type=["jpg", "jpeg", "png"])
+st.session_state["image_main"] = st.file_uploader("メイン画像", type=["jpg", "jpeg", "png"])
+st.session_state["image_sub1"] = st.file_uploader("サブ画像1", type=["jpg", "jpeg", "png"])
+st.session_state["image_sub2"] = st.file_uploader("サブ画像2", type=["jpg", "jpeg", "png"])
 
 submit = st.button("保存する" if edit_mode else "出品する")
 
@@ -127,7 +141,7 @@ def process_and_upload(file):
 if submit:
 
     # 入力チェック
-    if not name or not price or not desc:
+    if not st.session_state["name"] or not st.session_state["price"] or not st.session_state["desc"]:
         st.warning("商品名・価格・説明は必須です。")
         st.stop()
 
@@ -140,12 +154,12 @@ if submit:
         sub1_url = edit_item.get("画像URLサブ1", "")
         sub2_url = edit_item.get("画像URLサブ2", "")
 
-        if image_main:
-            main_url = process_and_upload(image_main)
-        if image_sub1:
-            sub1_url = process_and_upload(image_sub1)
-        if image_sub2:
-            sub2_url = process_and_upload(image_sub2)
+        if st.session_state["image_main"]:
+            main_url = process_and_upload(st.session_state["image_main"])
+        if st.session_state["image_sub1"]:
+            sub1_url = process_and_upload(st.session_state["image_sub1"])
+        if st.session_state["image_sub2"]:
+            sub2_url = process_and_upload(st.session_state["image_sub2"])
 
         all_data = sheet.get_all_records()
         row_index = next((i for i, row in enumerate(all_data)
@@ -158,10 +172,11 @@ if submit:
         row_num = row_index + 2
 
         update_row = [
-            edit_item["商品ID"], name, price, desc, condition,
+            edit_item["商品ID"], st.session_state["name"], st.session_state["price"],
+            st.session_state["desc"], st.session_state["condition"],
             main_url, sub1_url, sub2_url,
             edit_item["出品者"], edit_item["出品者名"],
-            edit_item["投稿日時"], category,
+            edit_item["投稿日時"], st.session_state["category"],
             edit_item.get("購入者", ""), edit_item.get("購入者名", ""),
             edit_item.get("購入日時", ""), edit_item["ステータス"]
         ]
@@ -177,39 +192,46 @@ if submit:
     # ✨ 新規出品
     # ----------------------------------------
     else:
-        if not image_main:
+        if not st.session_state["image_main"]:
             st.warning("メイン画像は必須です。")
             st.stop()
 
-        main_url = process_and_upload(image_main)
-        sub1_url = process_and_upload(image_sub1) if image_sub1 else ""
-        sub2_url = process_and_upload(image_sub2) if image_sub2 else ""
+        main_url = process_and_upload(st.session_state["image_main"])
+        sub1_url = process_and_upload(st.session_state["image_sub1"]) if st.session_state["image_sub1"] else ""
+        sub2_url = process_and_upload(st.session_state["image_sub2"]) if st.session_state["image_sub2"] else ""
 
         product_id = str(uuid.uuid4())
         jst = pytz.timezone("Asia/Tokyo")
         now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
 
         new_row = [
-            product_id, name, price, desc, condition,
+            product_id, st.session_state["name"], st.session_state["price"],
+            st.session_state["desc"], st.session_state["condition"],
             main_url, sub1_url, sub2_url,
             st.session_state["id"], st.session_state["username"],
-            now, category,
+            now, st.session_state["category"],
             "", "", "", "出品中"
         ]
 
         sheet.append_row(new_row)
 
+        # 完了メッセージを session_state に保存
+        st.session_state["post_message"] = f"{st.session_state['username']} さん、商品を出品しました。ありがとうございます。"
+
         # 入力値を初期化
         for key in ["name", "price", "category", "condition", "desc",
-                    "image_main", "image_sub1", "image_sub2"]:
+                    "image_main", "image_sub1", "image_sub2", "form_initialized"]:
             if key in st.session_state:
                 st.session_state.pop(key)
 
-        # 完了メッセージ
-        st.success(f"{st.session_state['username']} さん、商品を出品しました。ありがとうございます。")
-
-        time.sleep(0.8)
         st.rerun()
+
+# ============================================
+# 🎉 完了メッセージ（rerun後も表示）
+# ============================================
+if "post_message" in st.session_state:
+    st.success(st.session_state["post_message"])
+    st.session_state.pop("post_message")
 
 # ============================================
 # 📌 フッターメニュー
