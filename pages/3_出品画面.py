@@ -57,7 +57,7 @@ cloudinary.config(
 )
 
 # ============================================
-# 📝 初期化（新規出品時のみ）
+# 📝 初期化（session_state）
 # ============================================
 if "form_initialized" not in st.session_state:
     st.session_state["name"] = edit_item["商品名"] if edit_mode else ""
@@ -65,9 +65,7 @@ if "form_initialized" not in st.session_state:
     st.session_state["category"] = edit_item["カテゴリ"] if edit_mode else "衣類"
     st.session_state["condition"] = edit_item["状態"] if edit_mode else "新品"
     st.session_state["desc"] = edit_item["説明"] if edit_mode else ""
-    st.session_state["image_main"] = None
-    st.session_state["image_sub1"] = None
-    st.session_state["image_sub2"] = None
+    st.session_state["uploader_key"] = str(uuid.uuid4())  # ← file_uploader の key
     st.session_state["form_initialized"] = True
 
 # ============================================
@@ -104,12 +102,27 @@ if edit_mode:
         st.image(edit_item["画像URLサブ2"], width=200)
 
 # ============================================
-# 🖼 新しい画像アップロード
+# 🖼 新しい画像アップロード（文言変更済）
 # ============================================
-st.markdown("### 新しい画像をアップロード（任意）")
-st.session_state["image_main"] = st.file_uploader("メイン画像", type=["jpg", "jpeg", "png"])
-st.session_state["image_sub1"] = st.file_uploader("サブ画像1", type=["jpg", "jpeg", "png"])
-st.session_state["image_sub2"] = st.file_uploader("サブ画像2", type=["jpg", "jpeg", "png"])
+st.markdown("### 画像アップロード（メイン画像（1枚目）：必須、サブ画像（2・3枚目）：任意）")
+
+st.session_state["image_main"] = st.file_uploader(
+    "メイン画像",
+    type=["jpg", "jpeg", "png"],
+    key=f"main_{st.session_state['uploader_key']}"
+)
+
+st.session_state["image_sub1"] = st.file_uploader(
+    "サブ画像1",
+    type=["jpg", "jpeg", "png"],
+    key=f"sub1_{st.session_state['uploader_key']}"
+)
+
+st.session_state["image_sub2"] = st.file_uploader(
+    "サブ画像2",
+    type=["jpg", "jpeg", "png"],
+    key=f"sub2_{st.session_state['uploader_key']}"
+)
 
 submit = st.button("保存する" if edit_mode else "出品する")
 
@@ -219,10 +232,12 @@ if submit:
         st.session_state["post_message"] = f"{st.session_state['username']} さん、商品を出品しました。ありがとうございます。"
 
         # 入力値を初期化
-        for key in ["name", "price", "category", "condition", "desc",
-                    "image_main", "image_sub1", "image_sub2", "form_initialized"]:
+        for key in ["name", "price", "category", "condition", "desc", "form_initialized"]:
             if key in st.session_state:
                 st.session_state.pop(key)
+
+        # file_uploader の key をリセット（画像クリアの決定版）
+        st.session_state["uploader_key"] = str(uuid.uuid4())
 
         st.rerun()
 
