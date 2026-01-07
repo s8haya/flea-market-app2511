@@ -15,6 +15,12 @@ st.set_page_config(page_title="出品画面", layout="centered")
 st.title("出品画面")
 
 # ============================================
+# ✅ uploader_key を初期化（画像アップロードの安定化）
+# ============================================
+if "uploader_key" not in st.session_state:
+    st.session_state["uploader_key"] = str(uuid.uuid4())
+
+# ============================================
 # 🔐 ログインチェック
 # ============================================
 if st.session_state.get("logged_in"):
@@ -65,7 +71,6 @@ if "form_initialized" not in st.session_state:
     st.session_state["category"] = edit_item["カテゴリ"] if edit_mode else "衣類"
     st.session_state["condition"] = edit_item["状態"] if edit_mode else "新品"
     st.session_state["desc"] = edit_item["説明"] if edit_mode else ""
-    st.session_state["uploader_key"] = str(uuid.uuid4())  # ← file_uploader の key
     st.session_state["form_initialized"] = True
 
 # ============================================
@@ -153,7 +158,6 @@ def process_and_upload(file):
 # ============================================
 if submit:
 
-    # 入力チェック
     if not st.session_state["name"] or not st.session_state["price"] or not st.session_state["desc"]:
         st.warning("商品名・価格・説明は必須です。")
         st.stop()
