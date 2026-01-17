@@ -105,7 +105,7 @@ st.subheader("以下のQRコードからお支払いください")
 
 # QRコード表示
 try:
-    qr_image = Image.open("QRsuzuki.png")
+    qr_image = Image.open("QRsuzuki_0117.png")
     st.image(qr_image, width=240)
 except Exception:
     st.error("QRコード画像の読み込みに失敗しました。QRsuzuki.png が正しく配置されているか確認してください。")
