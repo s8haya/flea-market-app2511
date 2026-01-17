@@ -10,18 +10,20 @@ st.set_page_config(page_title="商品検索", layout="centered")
 # 🔐 ログインチェック
 # ============================================
 if st.session_state.get("logged_in"):
-    with st.container(horizontal=True):
-        st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
-        if st.button("ログアウト"):
-            st.session_state["logged_in"] = False
-            st.session_state.pop("id", None)
-            st.session_state.pop("username", None)
-            st.rerun()
+    with st.container():
+        colA, colB = st.columns([4, 1])
+        with colA:
+            st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
+        with colB:
+            if st.button("ログアウト"):
+                st.session_state["logged_in"] = False
+                st.session_state.pop("id", None)
+                st.session_state.pop("username", None)
+                st.rerun()
 else:
     st.warning("ログインしてください")
     if st.button("ログイン画面へ"):
         st.switch_page("app.py")
-        st.stop()
     st.stop()
 
 # ============================================
@@ -36,7 +38,7 @@ def get_gspread_client():
 gc = get_gspread_client()
 
 # ============================================
-# 📄 商品データ取得（キャッシュしない → 最新化）
+# 📄 商品データ取得（キャッシュなし → 最新化）
 # ============================================
 def load_product_data():
     try:
@@ -58,58 +60,68 @@ if not data:
     st.stop()
 
 # ============================================
-# 🎨 CSS（カード枠＋ギャラリー固定枠＋リッチボタン）
+# 🎨 CSS（カード枠＋画像ラベル）
 # ============================================
 st.markdown("""
 <style>
 .product-card {
-    border: 2px solid #e0e0e0;
-    border-radius: 12px;
-    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 10px;
     margin-bottom: 20px;
-    background-color: #fafafa;
+    background-color: #fff;
+    box-shadow: 1px 1px 4px rgba(0,0,0,0.1);
 }
 
-.image-box {
-    width: 200px;
+.image-overlay {
+    position: relative;
+    width: 100%;
     height: 200px;
     overflow: hidden;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background-color: #f9f9f9;
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 6px;
 }
-.image-box img {
+.image-overlay img {
     width: 100%;
     height: 100%;
     object-fit: contain;
 }
 
-.thumb-box {
-    width: 50px;
-    height: 50px;
-    overflow: hidden;
-    border: 1px solid #ccc;
-    margin-top: 4px;
+.label {
+    position: absolute;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: bold;
+    color: white;
+    border-radius: 4px;
 }
-.thumb-box img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+.label.condition {
+    top: 8px;
+    left: 8px;
+    background-color: #4caf50;
+}
+.label.price {
+    bottom: 8px;
+    right: 8px;
+    background-color: #ff6b6b;
 }
 
 .buy-button {
-    background-color: #ff6b6b;
+    background-color: #1976d2;
     color: white;
-    padding: 10px 18px;
-    border-radius: 8px;
+    padding: 8px 14px;
+    border-radius: 6px;
     border: none;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: bold;
     cursor: pointer;
 }
 .buy-button:hover {
-    background-color: #ff4b4b;
+    background-color: #1565c0;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -210,7 +222,7 @@ elif sort_option == "価格が高い順":
 # ============================================
 # 📄 ページネーション
 # ============================================
-ITEMS_PER_PAGE = 6
+ITEMS_PER_PAGE = 12
 total_pages = (len(filtered) - 1) // ITEMS_PER_PAGE + 1
 
 if "page" not in st.session_state:
@@ -234,41 +246,34 @@ def render_pagination_controls(position: str):
 render_pagination_controls("top")
 
 # ============================================
-# 🖼️ 商品表示（ギャラリー＋サムネイル切替）
+# 🖼️ 商品表示（3列グリッド・画像ラベル付き）
 # ============================================
 start_idx = (st.session_state["page"] - 1) * ITEMS_PER_PAGE
 end_idx = start_idx + ITEMS_PER_PAGE
 page_items = filtered[start_idx:end_idx]
 
 if page_items:
-    num_cols = 2
-    for row_index in range(0, len(page_items), num_cols):
-        row_items = page_items[row_index:row_index + num_cols]
+    for row_index in range(0, len(page_items), 3):
+        row_items = page_items[row_index:row_index + 3]
         cols = st.columns(len(row_items))
 
         for col, item in zip(cols, row_items):
             with col:
                 st.markdown('<div class="product-card">', unsafe_allow_html=True)
 
+                image_url = item.get("画像URL", "")
+                price = item.get("価格", "不明")
+                condition = item.get("状態", "不明")
                 product_id = item.get("商品ID", f"noid_{row_index}")
 
-                main_url = item.get("画像URL", "")
-                sub1_url = item.get("画像URLサブ1", "")
-                sub2_url = item.get("画像URLサブ2", "")
-
-                image_candidates = [url for url in [main_url, sub1_url, sub2_url] if url]
-
-                if f"thumb_{product_id}" not in st.session_state:
-                    st.session_state[f"thumb_{product_id}"] = image_candidates[0] if image_candidates else ""
-
-                current_img = st.session_state.get(f"thumb_{product_id}", "")
-
-                # メイン画像（固定枠）
-                if current_img:
+                # メイン画像＋ラベル
+                if image_url:
                     st.markdown(
                         f"""
-                        <div class="image-box">
-                            <img src="{current_img}" />
+                        <div class="image-overlay">
+                            <img src="{image_url}" />
+                            <div class="label condition">{condition}</div>
+                            <div class="label price">¥{price}</div>
                         </div>
                         """,
                         unsafe_allow_html=True
@@ -276,31 +281,9 @@ if page_items:
                 else:
                     st.write("画像なし")
 
-                # サムネイル
-                thumb_urls = [main_url, sub1_url, sub2_url]
-                thumb_cols = st.columns(len(thumb_urls))
-
-                for idx, (thumb_col, url) in enumerate(zip(thumb_cols, thumb_urls)):
-                    if not url:
-                        continue
-                    with thumb_col:
-                        st.markdown(
-                            f"""
-                            <div class="thumb-box">
-                                <img src="{url}" />
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-                        if st.button(f"{idx+1}", key=f"thumbbtn_{product_id}_{idx}"):
-                            st.session_state[f"thumb_{product_id}"] = url
-
-                # 商品情報
+                # 商品名・カテゴリ・ステータス
                 st.markdown(f"**{item.get('商品名', '不明')}**")
-                st.markdown(f"**{item.get('価格', '不明')}円**")
                 st.caption(f"カテゴリ: {item.get('カテゴリ', '不明')}")
-                st.caption(f"状態: {item.get('状態', '不明')}")
-                st.caption(f"出品日時: {item.get('投稿日時', '不明')}")
                 st.caption(f"ステータス: {item.get('ステータス', '不明')}")
 
                 # 購入ボタン
@@ -311,7 +294,6 @@ if page_items:
                         st.stop()
 
                 st.markdown('</div>', unsafe_allow_html=True)
-
 else:
     st.warning("該当する商品が見つかりませんでした。")
 
@@ -322,8 +304,9 @@ render_pagination_controls("bottom")
 # ============================================
 st.divider()
 st.markdown("### 📌 メニュー")
-with st.container(horizontal=True):
-    st.page_link("pages/2_商品検索.py", label="商品検索")
-    st.page_link("pages/3_出品画面.py", label="出品画面")
-    st.page_link("pages/7_マイページ（出品）.py", label="マイページ（出品）")
-    st.page_link("pages/6_マイページ（購入）.py", label="マイページ（購入）")
+with st.container():
+    colA, colB, colC, colD = st.columns(4)
+    colA.page_link("pages/2_商品検索.py", label="商品検索")
+    colB.page_link("pages/3_出品画面.py", label="出品画面")
+    colC.page_link("pages/7_マイページ（出品）.py", label="マイページ（出品）")
+    colD.page_link("pages/6_マイページ（購入）.py", label="マイページ（購入）")
