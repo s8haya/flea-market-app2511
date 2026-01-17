@@ -32,7 +32,14 @@ try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
     creds = Credentials.from_authorized_user_info(creds_dict)
     gc = gspread.authorize(creds)
+
+    # 商品一覧シート
     sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
+
+    # usersシート（購入者所属を逆引きするため）
+    users_sheet = gc.open(st.secrets["USERS_SHEET_NAME"]).sheet1
+    users_data = users_sheet.get_all_records()
+
 except Exception as e:
     st.error(f"Google Sheetsの認証に失敗しました: {e}")
     st.stop()
@@ -63,7 +70,6 @@ st.markdown("""
     margin-bottom: 20px;
     background-color: #fafafa;
 }
-
 .image-box {
     width: 240px;
     height: 240px;
@@ -78,7 +84,6 @@ st.markdown("""
     height: 100%;
     object-fit: contain;
 }
-
 .thumb-box {
     width: 60px;
     height: 60px;
@@ -90,45 +95,6 @@ st.markdown("""
     width: 100%;
     height: 100%;
     object-fit: cover;
-}
-
-.withdraw-button {
-    background-color: #888;
-    color: white;
-    padding: 8px 14px;
-    border-radius: 6px;
-    border: none;
-    font-size: 14px;
-    cursor: pointer;
-}
-.withdraw-button:hover {
-    background-color: #666;
-}
-
-.restore-button {
-    background-color: #2ECC71;
-    color: white;
-    padding: 8px 14px;
-    border-radius: 6px;
-    border: none;
-    font-size: 14px;
-    cursor: pointer;
-}
-.restore-button:hover {
-    background-color: #27AE60;
-}
-
-.edit-button {
-    background-color: #4A90E2;
-    color: white;
-    padding: 8px 14px;
-    border-radius: 6px;
-    border: none;
-    font-size: 14px;
-    cursor: pointer;
-}
-.edit-button:hover {
-    background-color: #357ABD;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -148,13 +114,11 @@ if my_items:
 
         image_candidates = [url for url in [main_url, sub1_url, sub2_url] if url]
 
-        # 初期表示
         if f"mypage_sell_gallery_{product_id}" not in st.session_state:
             st.session_state[f"mypage_sell_gallery_{product_id}"] = image_candidates[0] if image_candidates else ""
 
         current_img = st.session_state[f"mypage_sell_gallery_{product_id}"]
 
-        # カード開始
         st.markdown('<div class="product-card">', unsafe_allow_html=True)
 
         # メイン画像
@@ -197,24 +161,34 @@ if my_items:
         st.caption(f"投稿日時: {item.get('投稿日時', '不明')}")
         st.caption(f"ステータス: {item.get('ステータス', '不明')}")
 
-        # ✅ 支払い済メッセージ表示
+        # ============================================
+        # ✅ 支払い済メッセージ（usersシートから所属を逆引き）
+        # ============================================
         if item.get("ステータス") == "支払い済":
+
+            buyer_id = str(item.get("購入者", "")).strip()
             buyer_name = item.get("購入者名", "不明")
-            buyer_dept = item.get("department", "不明")
+
+            # usersシートから逆引き
+            buyer_info = next(
+                (u for u in users_data if str(u.get("id", "")).strip() == buyer_id),
+                None
+            )
+
+            buyer_dept = buyer_info.get("department", "不明") if buyer_info else "不明"
+
             st.warning(
                 f"""物品寄付いただきありがとうございました。  
 当商品は **{buyer_dept}** の **{buyer_name}** さんが購入し、既に事務局に支払い済の状態です。  
 メールがお二方に発信されておりますので、個人間で調整のうえ、物品を **{buyer_name}** さんにお渡しください。"""
             )
 
+        # ============================================
         # ボタン（修正 → 出品状態変更）
+        # ============================================
         colA, colB = st.columns(2)
-
         status = item.get("ステータス", "")
 
-        # -------------------------
-        # 修正ボタン（売買成立時は非表示）
-        # -------------------------
         with colA:
             if status in ["購入手続き中", "支払い済"]:
                 st.caption("※ この商品は修正できません")
@@ -224,12 +198,7 @@ if my_items:
                     st.switch_page("pages/3_出品画面.py")
                     st.stop()
 
-        # -------------------------
-        # 出品状態変更ボタン
-        # -------------------------
         with colB:
-
-            # 出品中 → 取下げ
             if status == "出品中":
                 if st.button("取下げ", key=f"withdraw_{product_id}"):
                     row_index = next((i for i, row in enumerate(raw_data)
@@ -239,7 +208,6 @@ if my_items:
                         st.success("商品を取下げました")
                         st.rerun()
 
-            # 取下げ → 出品中に戻す
             elif status == "取下げ":
                 if st.button("出品に戻す", key=f"restore_{product_id}"):
                     row_index = next((i for i, row in enumerate(raw_data)
@@ -249,7 +217,6 @@ if my_items:
                         st.success("商品を再出品しました")
                         st.rerun()
 
-            # 売買成立中（購入手続き中・支払い済）
             else:
                 st.caption("※ この商品は現在操作できません")
 
