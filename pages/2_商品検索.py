@@ -122,7 +122,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
 # ============================================
 # 🔍 検索・絞り込み UI
 # ============================================
@@ -225,17 +224,23 @@ total_pages = (len(filtered) - 1) // ITEMS_PER_PAGE + 1
 if "page" not in st.session_state:
     st.session_state["page"] = 1
 
+# 🔥 スクロール制御フラグ
+if "scroll_to_top" not in st.session_state:
+    st.session_state["scroll_to_top"] = False
+
 def render_pagination_controls(position: str):
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
         if st.session_state["page"] > 1:
             if st.button("← 前へ", key=f"{position}_prev_{st.session_state['page']}"):
                 st.session_state["page"] -= 1
+                st.session_state["scroll_to_top"] = True
                 st.rerun()
     with col3:
         if st.session_state["page"] < total_pages:
             if st.button("次へ →", key=f"{position}_next_{st.session_state['page']}"):
                 st.session_state["page"] += 1
+                st.session_state["scroll_to_top"] = True
                 st.rerun()
     with col2:
         st.markdown(f"ページ {st.session_state['page']} / {total_pages}")
@@ -243,7 +248,7 @@ def render_pagination_controls(position: str):
 render_pagination_controls("top")
 
 # ============================================
-# 🖼️ 商品表示（3列グリッド・画像ラベル付き）
+# 🖼️ 商品表示（3列グリッド）
 # ============================================
 start_idx = (st.session_state["page"] - 1) * ITEMS_PER_PAGE
 end_idx = start_idx + ITEMS_PER_PAGE
@@ -263,7 +268,6 @@ if page_items:
                 condition = item.get("状態", "不明")
                 product_id = item.get("商品ID", f"noid_{row_index}")
 
-                # メイン画像＋ラベル
                 if image_url:
                     st.markdown(
                         f"""
@@ -278,12 +282,10 @@ if page_items:
                 else:
                     st.write("画像なし")
 
-                # 商品名・カテゴリ・ステータス
                 st.markdown(f"**{item.get('商品名', '不明')}**")
                 st.caption(f"カテゴリ: {item.get('カテゴリ', '不明')}")
                 st.caption(f"ステータス: {item.get('ステータス', '不明')}")
 
-                # 購入ボタン
                 if item.get("ステータス") == "出品中":
                     if st.button("購入する", key=f"buy_{product_id}_{row_index}"):
                         st.session_state["selected_product"] = item
@@ -295,6 +297,17 @@ else:
     st.warning("該当する商品が見つかりませんでした。")
 
 render_pagination_controls("bottom")
+
+# ============================================
+# 🔝 ページ遷移後にスクロールを最上部へ
+# ============================================
+if st.session_state.get("scroll_to_top"):
+    st.markdown("""
+        <script>
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        </script>
+    """, unsafe_allow_html=True)
+    st.session_state["scroll_to_top"] = False
 
 # ============================================
 # 📌 フッターメニュー
