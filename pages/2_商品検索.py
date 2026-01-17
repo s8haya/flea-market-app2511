@@ -65,12 +65,9 @@ if not data:
 st.markdown("""
 <style>
 .product-card {
-    border: 1px solid #ccc;  /* ← 白すぎた枠線をグレーに */
-    border-radius: 10px;
-    padding: 10px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 12px;
     margin-bottom: 20px;
-    background-color: #fff;
-    box-shadow: 0px 1px 3px rgba(0,0,0,0.05);  /* ← 影を軽く */
 }
 
 .image-overlay {
@@ -78,7 +75,6 @@ st.markdown("""
     width: 100%;
     height: 200px;
     overflow: hidden;
-    border-radius: 8px;
     margin-bottom: 8px;
     background-color: #f9f9f9;
     display: flex;
