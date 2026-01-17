@@ -224,7 +224,7 @@ if st.button("支払い済"):
             st.stop()
 
         # ステータス更新
-        sheet.update_cell(row_index + 2, 16, "支払い確認中")
+        sheet.update_cell(row_index + 2, 16, "支払い済")
         time.sleep(1)
 
         # メール送信処理

@@ -206,7 +206,7 @@ if my_items:
         # 修正ボタン（売買成立時は非表示）
         # -------------------------
         with colA:
-            if status in ["購入手続き中", "支払い確認中"]:
+            if status in ["購入手続き中", "支払い済"]:
                 st.caption("※ この商品は修正できません")
             else:
                 if st.button("修正", key=f"edit_{product_id}"):
@@ -239,7 +239,7 @@ if my_items:
                         st.success("商品を再出品しました")
                         st.rerun()
 
-            # 売買成立中（購入手続き中・支払い確認中）
+            # 売買成立中（購入手続き中・支払い済）
             else:
                 st.caption("※ この商品は現在操作できません")
 
