@@ -6,7 +6,12 @@ from datetime import datetime
 
 st.set_page_config(page_title="商品検索", layout="centered")
 
+# 🔝 ページ最上部アンカー
+st.markdown('<a id="top"></a>', unsafe_allow_html=True)
+
+# ============================================
 # 🔐 ログインチェック
+# ============================================
 if st.session_state.get("logged_in"):
     colA, colB = st.columns([4, 1])
     with colA:
@@ -23,7 +28,9 @@ else:
         st.switch_page("app.py")
     st.stop()
 
-# 🔑 OAuth認証
+# ============================================
+# 🔑 OAuth認証（キャッシュ）
+# ============================================
 @st.cache_resource
 def get_gspread_client():
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
@@ -32,14 +39,18 @@ def get_gspread_client():
 
 gc = get_gspread_client()
 
+# ============================================
 # 📄 商品データ取得
+# ============================================
 def load_product_data():
     try:
         sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
         raw_data = sheet.get_all_records()
         return [
             row for row in raw_data
-            if row.get("商品名") and row.get("価格") and row.get("画像URL")
+            if row.get("商品名")
+            and row.get("価格")
+            and row.get("画像URL")
             and row.get("ステータス") != "取下げ"
         ]
     except Exception as e:
@@ -50,7 +61,9 @@ data = load_product_data()
 if not data:
     st.stop()
 
-# 🎨 CSS
+# ============================================
+# 🎨 CSS（カード枠＋画像ラベル）
+# ============================================
 st.markdown("""
 <style>
 .product-card {
@@ -108,24 +121,42 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 🔍 絞り込み UI
+# ============================================
+# 🔍 検索・絞り込み UI
+# ============================================
 col1, col2, col3 = st.columns(3)
 with col1:
     search = st.text_input("🔍 商品名で検索")
 with col2:
-    category_filter = st.selectbox("📦 カテゴリ絞り込み", ["すべて"] + sorted(set(row.get("カテゴリ", "") for row in data)))
+    category_filter = st.selectbox(
+        "📦 カテゴリ絞り込み",
+        ["すべて"] + sorted(set(row.get("カテゴリ", "") for row in data))
+    )
 with col3:
-    condition_filter = st.selectbox("🧺 状態絞り込み", ["すべて"] + sorted(set(row.get("状態", "") for row in data)))
+    condition_filter = st.selectbox(
+        "🧺 状態絞り込み",
+        ["すべて"] + sorted(set(row.get("状態", "") for row in data))
+    )
 
 col4, col5, col6 = st.columns(3)
 with col4:
-    status_filter = st.selectbox("📌 出品ステータス", ["すべて", "出品中のみ", "売却済"], index=1)
+    status_filter = st.selectbox(
+        "📌 出品ステータス",
+        ["すべて", "出品中のみ", "売却済"],
+        index=1
+    )
 with col5:
-    sort_option = st.radio("並び順", ["新着順", "価格が安い順", "価格が高い順"], horizontal=True)
+    sort_option = st.radio(
+        "並び順",
+        ["新着順", "価格が安い順", "価格が高い順"],
+        horizontal=True
+    )
 with col6:
     st.empty()
 
-# 🔄 ページリセット
+# ============================================
+# 🔄 ページリセット（フィルター変更時）
+# ============================================
 if "prev_filters" not in st.session_state:
     st.session_state["prev_filters"] = {}
 
@@ -141,20 +172,34 @@ if st.session_state["prev_filters"] != current_filters:
     st.session_state["page"] = 1
     st.session_state["prev_filters"] = current_filters
 
+# ============================================
 # 🔎 絞り込み処理
+# ============================================
 filtered = data
+
 if search:
-    filtered = [item for item in filtered if search.lower() in item.get("商品名", "").lower()]
+    filtered = [
+        item for item in filtered
+        if search.lower() in item.get("商品名", "").lower()
+    ]
+
 if category_filter != "すべて":
     filtered = [item for item in filtered if item.get("カテゴリ") == category_filter]
+
 if condition_filter != "すべて":
     filtered = [item for item in filtered if item.get("状態") == condition_filter]
+
 if status_filter == "出品中のみ":
     filtered = [item for item in filtered if item.get("ステータス") == "出品中"]
 elif status_filter == "売却済":
-    filtered = [item for item in filtered if item.get("ステータス") not in ["出品中", "取下げ"]]
+    filtered = [
+        item for item in filtered
+        if item.get("ステータス") not in ["出品中", "取下げ"]
+    ]
 
+# ============================================
 # 🔢 並び替え
+# ============================================
 def parse_datetime(dt_str):
     try:
         return datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
@@ -168,7 +213,9 @@ elif sort_option == "価格が安い順":
 elif sort_option == "価格が高い順":
     filtered.sort(key=lambda x: x.get("価格", 0), reverse=True)
 
+# ============================================
 # 📄 ページネーション
+# ============================================
 ITEMS_PER_PAGE = 12
 total_pages = (len(filtered) - 1) // ITEMS_PER_PAGE + 1
 
@@ -182,19 +229,32 @@ def render_pagination_controls(position: str):
             if st.button("← 前へ", key=f"{position}_prev_{st.session_state['page']}"):
                 st.session_state["page"] -= 1
                 st.experimental_set_query_params(page=st.session_state["page"])
-                st.rerun()
+                st.markdown("""
+                    <script>
+                        window.location.reload();
+                    </script>
+                """, unsafe_allow_html=True)
+                st.stop()
     with col3:
         if st.session_state["page"] < total_pages:
             if st.button("次へ →", key=f"{position}_next_{st.session_state['page']}"):
                 st.session_state["page"] += 1
                 st.experimental_set_query_params(page=st.session_state["page"])
-                st.rerun()
+                st.markdown("""
+                    <script>
+                        window.location.reload();
+                    </script>
+                """, unsafe_allow_html=True)
+                st.stop()
     with col2:
         st.markdown(f"ページ {st.session_state['page']} / {total_pages}")
 
+# 上部ページネーション
 render_pagination_controls("top")
 
-# 🖼️ 商品表示
+# ============================================
+# 🖼️ 商品表示（3列グリッド）
+# ============================================
 start_idx = (st.session_state["page"] - 1) * ITEMS_PER_PAGE
 end_idx = start_idx + ITEMS_PER_PAGE
 page_items = filtered[start_idx:end_idx]
@@ -203,26 +263,37 @@ if page_items:
     for row_index in range(0, len(page_items), 3):
         row_items = page_items[row_index:row_index + 3]
         cols = st.columns(len(row_items))
+
         for col, item in zip(cols, row_items):
             with col:
                 st.markdown('<div class="product-card">', unsafe_allow_html=True)
+
                 image_url = item.get("画像URL", "")
                 price = item.get("価格", "不明")
                 condition = item.get("状態", "不明")
                 product_id = item.get("商品ID", f"noid_{row_index}")
+
+                # 画像＋ラベル
                 if image_url:
-                    st.markdown(f"""
+                    st.markdown(
+                        f"""
                         <div class="image-overlay">
                             <img src="{image_url}" />
                             <div class="label condition">{condition}</div>
                             <div class="label price">¥{price}</div>
                         </div>
-                    """, unsafe_allow_html=True)
+                        """,
+                        unsafe_allow_html=True
+                    )
                 else:
                     st.write("画像なし")
+
+                # 商品名・カテゴリ・ステータス
                 st.markdown(f"**{item.get('商品名', '不明')}**")
                 st.caption(f"カテゴリ: {item.get('カテゴリ', '不明')}")
                 st.caption(f"ステータス: {item.get('ステータス', '不明')}")
+
+                # 購入ボタン
                 if item.get("ステータス") == "出品中":
                     if st.button("購入する", key=f"buy_{product_id}_{row_index}"):
                         st.session_state["selected_product"] = item
@@ -234,10 +305,14 @@ if page_items:
 else:
     st.warning("該当する商品が見つかりませんでした。")
 
-# ▼▼▼ ページネーション（下部） ▼▼▼
+# ============================================
+# 📄 ページネーション（下部）
+# ============================================
 render_pagination_controls("bottom")
 
-# 🔝 ページ遷移後にスクロールを最上部へ
+# ============================================
+# 🔝 ページ遷移後にスクロールを最上部へ（強制リロード方式）
+# ============================================
 query_params = st.experimental_get_query_params()
 if query_params.get("page"):
     st.markdown("""
