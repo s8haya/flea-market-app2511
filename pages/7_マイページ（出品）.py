@@ -26,7 +26,7 @@ else:
     st.stop()
 
 # ============================================
-# 🔑 OAuth認証
+# 🔑 OAuth認証（商品一覧＋usersシート）
 # ============================================
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
@@ -36,8 +36,8 @@ try:
     # 商品一覧シート
     sheet = gc.open(st.secrets["PRODUCT_SHEET_NAME"]).sheet1
 
-    # usersシート（購入者所属を逆引きするため）
-    users_sheet = gc.open(st.secrets["USERS_SHEET_NAME"]).sheet1
+    # usersシート（購入者の所属を逆引きするため）
+    users_sheet = gc.open(st.secrets["USER_SHEET_NAME"]).sheet1
     users_data = users_sheet.get_all_records()
 
 except Exception as e:
