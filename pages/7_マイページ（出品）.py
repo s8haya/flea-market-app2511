@@ -197,6 +197,16 @@ if my_items:
         st.caption(f"投稿日時: {item.get('投稿日時', '不明')}")
         st.caption(f"ステータス: {item.get('ステータス', '不明')}")
 
+        # ✅ 支払い済メッセージ表示
+        if item.get("ステータス") == "支払い済":
+            buyer_name = item.get("購入者名", "不明")
+            buyer_dept = item.get("department", "不明")
+            st.warning(
+                f"""物品寄付いただきありがとうございました。  
+当商品は **{buyer_dept}** の **{buyer_name}** さんが購入し、既に事務局に支払い済の状態です。  
+メールがお二方に発信されておりますので、個人間で調整のうえ、物品を **{buyer_name}** さんにお渡しください。"""
+            )
+
         # ボタン（修正 → 出品状態変更）
         colA, colB = st.columns(2)
 
