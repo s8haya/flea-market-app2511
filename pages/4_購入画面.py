@@ -161,13 +161,17 @@ for idx, (col, url) in enumerate(zip(thumb_cols, thumb_urls)):
 # ============================================
 st.markdown(f"### {product.get('商品名', '不明')}")
 st.write(f"価格: {product.get('価格', '不明')}円")
-st.write(f"カテゴリ: {product.get('カテゴリ', '不明')}")
+
+category = product.get("カテゴリ", "不明")
+condition = product.get("状態", "不明")
+st.write(f"カテゴリ: {category}　｜　状態: {condition}")
 
 desc_text = product.get("説明", "")
 st.markdown(desc_text.replace("\n", "<br>"), unsafe_allow_html=True)
 
 st.caption(f"出品日時: {product.get('投稿日時', '不明')}")
 st.caption(f"ステータス: {product.get('ステータス', '不明')}")
+
 
 st.divider()
 st.subheader("本当に購入しますか？")
