@@ -104,6 +104,29 @@ df_summary = pd.DataFrame(summary)
 # ============================================
 # 🏆 ランキング表示（競争心を刺激）
 # ============================================
+# ============================================
+# 📐 データフレームの文字サイズ調整（CSS）
+# ============================================
+st.markdown("""
+<style>
+/* データフレーム全体の文字サイズ */
+.dataframe tbody td {
+    font-size: 15px !important;
+}
+
+/* カラム名（ヘッダー）の文字サイズ */
+.dataframe thead th {
+    font-size: 15px !important;
+}
+
+/* 行番号（index）の文字サイズ */
+.dataframe tbody th {
+    font-size: 15px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
 st.subheader("🏆 部署別ランキング")
 
 col1, col2 = st.columns(2)
@@ -119,7 +142,12 @@ with col2:
     df_buy_rank = df_summary[["部署", "購入数", "累計購入金額"]].copy()
 
     # 購入者数を別途算出
-    buyer_counts = df_products[df_products["購入者部署"].notna()].groupby("購入者部署")["購入者"].nunique().reset_index()
+    buyer_counts = (
+        df_products[df_products["購入者部署"].notna()]
+        .groupby("購入者部署")["購入者"]
+        .nunique()
+        .reset_index()
+    )
     buyer_counts.columns = ["部署", "購入者数"]
 
     df_buy_rank = df_buy_rank.merge(buyer_counts, on="部署", how="left").fillna(0)
