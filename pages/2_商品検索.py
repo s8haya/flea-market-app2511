@@ -38,7 +38,7 @@ def get_gspread_client():
 gc = get_gspread_client()
 
 # ============================================
-# 📄 商品データ取得
+# 📄 商品データ取得（キャッシュなし → 最新化）
 # ============================================
 def load_product_data():
     try:
@@ -46,7 +46,9 @@ def load_product_data():
         raw_data = sheet.get_all_records()
         return [
             row for row in raw_data
-            if row.get("商品名") and row.get("価格") and row.get("画像URL")
+            if row.get("商品名")
+            and row.get("価格")
+            and row.get("画像URL")
             and row.get("ステータス") != "取下げ"
         ]
     except Exception as e:
@@ -67,6 +69,7 @@ st.markdown("""
     padding-bottom: 12px;
     margin-bottom: 20px;
 }
+
 .image-overlay {
     position: relative;
     width: 100%;
@@ -83,6 +86,7 @@ st.markdown("""
     height: 100%;
     object-fit: contain;
 }
+
 .label {
     position: absolute;
     padding: 4px 8px;
@@ -101,6 +105,7 @@ st.markdown("""
     right: 8px;
     background-color: #ff6b6b;
 }
+
 .buy-button {
     background-color: #1976d2;
     color: white;
@@ -175,15 +180,24 @@ if st.session_state["prev_filters"] != current_filters:
 filtered = data
 
 if search:
-    filtered = [item for item in filtered if search.lower() in item.get("商品名", "").lower()]
+    filtered = [
+        item for item in filtered
+        if search.lower() in item.get("商品名", "").lower()
+    ]
+
 if category_filter != "すべて":
     filtered = [item for item in filtered if item.get("カテゴリ") == category_filter]
+
 if condition_filter != "すべて":
     filtered = [item for item in filtered if item.get("状態") == condition_filter]
+
 if status_filter == "出品中のみ":
     filtered = [item for item in filtered if item.get("ステータス") == "出品中"]
 elif status_filter == "売却済":
-    filtered = [item for item in filtered if item.get("ステータス") not in ["出品中", "取下げ"]]
+    filtered = [
+        item for item in filtered
+        if item.get("ステータス") not in ["出品中", "取下げ"]
+    ]
 
 # ============================================
 # 🔢 並び替え
@@ -210,19 +224,23 @@ total_pages = (len(filtered) - 1) // ITEMS_PER_PAGE + 1
 if "page" not in st.session_state:
     st.session_state["page"] = 1
 
+# 🔥 スクロール制御フラグ
+if "scroll_to_top" not in st.session_state:
+    st.session_state["scroll_to_top"] = False
+
 def render_pagination_controls(position: str):
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
         if st.session_state["page"] > 1:
             if st.button("← 前へ", key=f"{position}_prev_{st.session_state['page']}"):
                 st.session_state["page"] -= 1
-                st.experimental_set_query_params(page=st.session_state["page"])
+                st.session_state["scroll_to_top"] = True
                 st.rerun()
     with col3:
         if st.session_state["page"] < total_pages:
             if st.button("次へ →", key=f"{position}_next_{st.session_state['page']}"):
                 st.session_state["page"] += 1
-                st.experimental_set_query_params(page=st.session_state["page"])
+                st.session_state["scroll_to_top"] = True
                 st.rerun()
     with col2:
         st.markdown(f"ページ {st.session_state['page']} / {total_pages}")
@@ -259,4 +277,46 @@ if page_items:
                             <div class="label price">¥{price}</div>
                         </div>
                         """,
-                       
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.write("画像なし")
+
+                st.markdown(f"**{item.get('商品名', '不明')}**")
+                st.caption(f"カテゴリ: {item.get('カテゴリ', '不明')}")
+                st.caption(f"ステータス: {item.get('ステータス', '不明')}")
+
+                if item.get("ステータス") == "出品中":
+                    if st.button("購入する", key=f"buy_{product_id}_{row_index}"):
+                        st.session_state["selected_product"] = item
+                        st.switch_page("pages/4_購入画面.py")
+                        st.stop()
+
+                st.markdown('</div>', unsafe_allow_html=True)
+else:
+    st.warning("該当する商品が見つかりませんでした。")
+
+render_pagination_controls("bottom")
+
+# ============================================
+# 🔝 ページ遷移後にスクロールを最上部へ
+# ============================================
+if st.session_state.get("scroll_to_top"):
+    st.markdown("""
+        <script>
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        </script>
+    """, unsafe_allow_html=True)
+    st.session_state["scroll_to_top"] = False
+
+# ============================================
+# 📌 フッターメニュー
+# ============================================
+st.divider()
+st.markdown("### 📌 メニュー")
+with st.container():
+    colA, colB, colC, colD = st.columns(4)
+    colA.page_link("pages/2_商品検索.py", label="商品検索")
+    colB.page_link("pages/3_出品画面.py", label="出品画面")
+    colC.page_link("pages/7_マイページ（出品）.py", label="マイページ（出品）")
+    colD.page_link("pages/6_マイページ（購入）.py", label="マイページ（購入）")
