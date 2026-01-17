@@ -104,23 +104,23 @@ df_summary = pd.DataFrame(summary)
 # ============================================
 # 🏆 ランキング表示（競争心を刺激）
 # ============================================
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("### 🔥 出品数ランキング")
-    df_sell_rank = df_summary[["部署", "出品数", "参加人数", "累計出品金額"]].copy()
-    df_sell_rank = df_sell_rank.rename(columns={"参加人数": "出品者数"})
-    st.dataframe(df_sell_rank.sort_values("出品数", ascending=False), use_container_width=True)
-
 with col2:
     st.markdown("### 💰 購入数ランキング")
     df_buy_rank = df_summary[["部署", "購入数", "累計購入金額"]].copy()
 
-    buyer_counts = df_products[df_products["購入者部署"].notna()].groupby("購入者部署")["購入者"].nunique().reset_index()
+    buyer_counts = (
+        df_products[df_products["購入者部署"].notna()]
+        .groupby("購入者部署")["購入者"]
+        .nunique()
+        .reset_index()
+    )
     buyer_counts.columns = ["部署", "購入者数"]
 
     df_buy_rank = df_buy_rank.merge(buyer_counts, on="部署", how="left").fillna(0)
     df_buy_rank["購入者数"] = df_buy_rank["購入者数"].astype(int)
+
+    # ✅ 列順を調整
+    df_buy_rank = df_buy_rank[["部署", "購入数", "購入者数", "累計購入金額"]]
 
     st.dataframe(df_buy_rank.sort_values("購入数", ascending=False), use_container_width=True)
 
