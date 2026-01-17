@@ -104,6 +104,8 @@ df_summary = pd.DataFrame(summary)
 # ============================================
 # 🏆 ランキング表示（競争心を刺激）
 # ============================================
+col1, col2 = st.columns(2)
+
 with col1:
     st.markdown("### 🔥 出品数ランキング")
     st.dataframe(df_summary.sort_values("出品数", ascending=False), use_container_width=True)
