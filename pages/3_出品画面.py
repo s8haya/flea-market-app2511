@@ -77,10 +77,14 @@ if "form_initialized" not in st.session_state:
 # 📝 入力フォーム（session_stateベース）
 # ============================================
 
+col_warn, col_qr = st.columns([5, 1])
+with col_warn:
+    st.warning("出品時のみ、私用端末（スマホ等）で登録してください。※会社端末は画像アップロード不可のため")
 with col_qr:
-    st.markdown("<div style='text-align:right'>", unsafe_allow_html=True)
     st.image("QRdigicari.png", width=150)
-    st.markdown("</div>", unsafe_allow_html=True)
+
+st.session_state["name"] = st.text_input("商品名", st.session_state["name"])
+
 
 st.session_state["name"] = st.text_input("商品名", st.session_state["name"])
 st.session_state["price"] = st.number_input("価格", min_value=0, value=st.session_state["price"])
