@@ -83,27 +83,32 @@ with col_warn:
 with col_qr:
     st.image("QRdigicari.png", width=150)
 
-st.session_state["name"] = st.text_input("商品名", st.session_state["name"])
+# ✅ 商品名入力（重複排除＋key追加）
+st.session_state["name"] = st.text_input("商品名", st.session_state["name"], key="product_name_input")
 
+# ✅ 価格入力（key追加）
+st.session_state["price"] = st.number_input("価格", min_value=0, value=st.session_state["price"], key="product_price_input")
 
-st.session_state["name"] = st.text_input("商品名", st.session_state["name"])
-st.session_state["price"] = st.number_input("価格", min_value=0, value=st.session_state["price"])
-
+# ✅ カテゴリ選択（key追加）
 category_list = ["衣類", "雑貨", "日用品", "本", "スポーツ", "その他"]
 st.session_state["category"] = st.selectbox(
     "カテゴリ",
     category_list,
-    index=category_list.index(st.session_state["category"])
+    index=category_list.index(st.session_state["category"]),
+    key="product_category_select"
 )
 
+# ✅ 状態選択（key追加）
 condition_list = ["新品", "中古"]
 st.session_state["condition"] = st.selectbox(
     "状態",
     condition_list,
-    index=condition_list.index(st.session_state["condition"])
+    index=condition_list.index(st.session_state["condition"]),
+    key="product_condition_select"
 )
 
-st.session_state["desc"] = st.text_area("説明", st.session_state["desc"])
+# ✅ 説明欄（key追加）
+st.session_state["desc"] = st.text_area("説明", st.session_state["desc"], key="product_desc_input")
 
 # ============================================
 # 🖼 既存画像プレビュー（編集モードのみ）
