@@ -8,18 +8,13 @@ st.set_page_config(page_title="部署別の売買状況", layout="wide")
 st.title("📊 部署別の売買状況ダッシュボード")
 
 # ============================================
-# 🔐 ログインチェック
+# 👤 ログインしている場合だけ名前を表示
 # ============================================
-if not st.session_state.get("logged_in"):
-    st.warning("ログインしてください")
-    if st.button("ログイン画面へ"):
-        st.switch_page("app.py")
-    st.stop()
-
-st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
+if st.session_state.get("logged_in"):
+    st.markdown(f"👤 ログイン中：**{st.session_state['username']}** さん")
 
 # ============================================
-# 🔑 OAuth認証
+# 🔑 OAuth認証（ログイン不要でも内部で実行OK）
 # ============================================
 try:
     creds_dict = json.loads(st.secrets["OAUTH_TOKEN"])
@@ -73,19 +68,11 @@ dept_list = sorted(df_users["department_big"].unique())
 summary = []
 
 for dept in dept_list:
-    # 出品数
     sell_count = len(df_products[df_products["出品者部署"] == dept])
-
-    # 購入数
     buy_count = len(df_products[df_products["購入者部署"] == dept])
-
-    # 累計出品金額
     sell_amount = df_products[df_products["出品者部署"] == dept]["価格"].sum()
-
-    # 累計購入金額
     buy_amount = df_products[df_products["購入者部署"] == dept]["価格"].sum()
 
-    # 参加人数（出品 or 購入した人）
     sellers = set(df_products[df_products["出品者部署"] == dept]["出品者"])
     buyers = set(df_products[df_products["購入者部署"] == dept]["購入者"])
     participants = len(sellers.union(buyers))
@@ -102,7 +89,7 @@ for dept in dept_list:
 df_summary = pd.DataFrame(summary)
 
 # ============================================
-# 🏆 ランキング表示（競争心を刺激）
+# 🏆 ランキング表示
 # ============================================
 col1, col2 = st.columns(2)
 
@@ -127,7 +114,6 @@ with col2:
     df_buy_rank = df_buy_rank.merge(buyer_counts, on="部署", how="left").fillna(0)
     df_buy_rank["購入者数"] = df_buy_rank["購入者数"].astype(int)
 
-    # ✅ 列順を調整
     df_buy_rank = df_buy_rank[["部署", "購入数", "購入者数", "累計購入金額"]]
 
     st.dataframe(df_buy_rank.sort_values("購入数", ascending=False), use_container_width=True)
@@ -136,7 +122,6 @@ with col2:
 # 📈 ダッシュボード（全体サマリー）
 # ============================================
 st.subheader("📈 部署別サマリー")
-
 st.dataframe(df_summary, use_container_width=True)
 
 # ============================================
